@@ -24,6 +24,29 @@ Global flags apply to every command:
 Running `iflow` with no arguments prints the **today** dashboard: overdue tasks,
 tasks due today, and everything currently in progress.
 
+### Reading the output
+
+Task tables have these columns:
+
+| Column | Meaning |
+| --- | --- |
+| `ID` | Task id, used by every other command |
+| glyph | Status: `☐` todo, `◐` in progress, `☑` done |
+| `P` | Priority, `P0` (highest) … `P3` (lowest) |
+| `Due` | Local due time plus a relative hint |
+| `Project` | Project label |
+| `Title` | Task title |
+| `Tags` | `#tag` list |
+
+The `Due` column pairs the absolute local time with a relative hint:
+
+- `2026-10-15 23:00 (in 13 hrs)` — due tonight, 13 hours from now.
+- `2026-10-15 09:58 (12 hrs overdue)` — the due time passed 12 hours ago.
+
+Overdue times render in red and anything due within the next 24 hours in
+yellow. Durations always carry an explicit unit (`min` / `hr` / `day`) so a
+span of minutes is never mistaken for months.
+
 ## Task
 
 Tasks carry a title, optional notes, a status (`todo`/`doing`/`done`), a

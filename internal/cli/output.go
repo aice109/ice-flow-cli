@@ -3,9 +3,10 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
+	"regexp"
 	"strings"
-	"text/tabwriter"
 	"time"
 
 	"github.com/aice109/ice-flow-cli/internal/store"
@@ -36,16 +37,102 @@ func isTerminal(f *os.File) bool {
 	return fi.Mode()&os.ModeCharDevice != 0
 }
 
-// printTable renders headers and rows with aligned columns.
-func printTable(headers []string, rows [][]string) {
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+// ansiRe matches SGR (color/style) escape sequences.
+var ansiRe = regexp.MustCompile("\x1b\\[[0-9;]*m")
+
+// stripANSI removes color/style escape sequences from s.
+func stripANSI(s string) string {
+	if !strings.Contains(s, "\x1b[") {
+		return s
+	}
+	return ansiRe.ReplaceAllString(s, "")
+}
+
+// displayWidth reports the number of terminal cells s occupies, ignoring ANSI
+// escape sequences and counting East Asian wide runes as two cells.
+func displayWidth(s string) int {
+	w := 0
+	for _, r := range stripANSI(s) {
+		w += runeWidth(r)
+	}
+	return w
+}
+
+// runeWidth returns the cell width of a rune: 2 for East Asian wide and most
+// emoji, 1 otherwise. Zero-width and control runes count as 1 to stay safe.
+func runeWidth(r rune) int {
+	switch {
+	case r >= 0x1100 && r <= 0x115F, // Hangul Jamo
+		r == 0x2329, r == 0x232A,
+		r >= 0x2E80 && r <= 0x303E, // CJK radicals, Kangxi, CJK symbols
+		r >= 0x3041 && r <= 0x33FF, // Hiragana .. CJK compatibility
+		r >= 0x3400 && r <= 0x4DBF, // CJK extension A
+		r >= 0x4E00 && r <= 0x9FFF, // CJK unified ideographs
+		r >= 0xA000 && r <= 0xA4CF, // Yi
+		r >= 0xAC00 && r <= 0xD7A3, // Hangul syllables
+		r >= 0xF900 && r <= 0xFAFF, // CJK compatibility ideographs
+		r >= 0xFE30 && r <= 0xFE6F, // CJK compatibility forms
+		r >= 0xFF00 && r <= 0xFF60, // fullwidth forms
+		r >= 0xFFE0 && r <= 0xFFE6,
+		r >= 0x1F300 && r <= 0x1FAFF, // emoji
+		r >= 0x20000 && r <= 0x3FFFD: // CJK extension B and beyond
+		return 2
+	}
+	return 1
+}
+
+// writeTable renders headers and rows with aligned columns. Alignment is
+// computed from visible width, so ANSI colors and wide (CJK) runes line up.
+func writeTable(w io.Writer, headers []string, rows [][]string) {
+	all := make([][]string, 0, len(rows)+1)
 	if len(headers) > 0 {
-		fmt.Fprintln(w, strings.Join(headers, "\t"))
+		all = append(all, headers)
 	}
-	for _, r := range rows {
-		fmt.Fprintln(w, strings.Join(r, "\t"))
+	all = append(all, rows...)
+	if len(all) == 0 {
+		return
 	}
-	w.Flush()
+
+	cols := 0
+	for _, r := range all {
+		if len(r) > cols {
+			cols = len(r)
+		}
+	}
+	widths := make([]int, cols)
+	for _, r := range all {
+		for i, c := range r {
+			if cw := displayWidth(c); cw > widths[i] {
+				widths[i] = cw
+			}
+		}
+	}
+
+	var b strings.Builder
+	for _, r := range all {
+		b.Reset()
+		for i := 0; i < cols; i++ {
+			cell := ""
+			if i < len(r) {
+				cell = r[i]
+			}
+			b.WriteString(cell)
+			if i == cols-1 {
+				break
+			}
+			pad := widths[i] - displayWidth(cell) + 2
+			if pad < 0 {
+				pad = 0
+			}
+			b.WriteString(strings.Repeat(" ", pad))
+		}
+		fmt.Fprintln(w, strings.TrimRight(b.String(), " "))
+	}
+}
+
+// printTable renders a table to stdout.
+func printTable(headers []string, rows [][]string) {
+	writeTable(os.Stdout, headers, rows)
 }
 
 // printJSON marshals v as indented JSON.
@@ -68,24 +155,33 @@ func statusGlyph(status string) string {
 	}
 }
 
-// humanDur renders a duration compactly ("5m", "3h", "2d").
+// humanDur renders a duration in unambiguous units ("12 min", "13 hr",
+// "2 days"). "m" alone would be read as either minutes or months, so the unit
+// is always spelled out.
 func humanDur(d time.Duration) string {
 	if d < 0 {
 		d = -d
 	}
 	switch {
 	case d < time.Minute:
-		return "now"
+		return "<1 min"
 	case d < time.Hour:
-		return fmt.Sprintf("%dm", int(d.Minutes()))
+		return plural(int(d.Minutes()), "min")
 	case d < 24*time.Hour:
-		return fmt.Sprintf("%dh", int(d.Hours()))
+		return plural(int(d.Hours()), "hr")
 	default:
-		return fmt.Sprintf("%dd", int(d.Hours()/24))
+		return plural(int(d.Hours()/24), "day")
 	}
 }
 
-// relTime describes a time relative to now ("in 2h", "3d overdue").
+func plural(n int, unit string) string {
+	if n == 1 {
+		return fmt.Sprintf("%d %s", n, unit)
+	}
+	return fmt.Sprintf("%d %ss", n, unit)
+}
+
+// relTime describes a time relative to now, e.g. "in 13 hr" or "5 min overdue".
 func relTime(t, now time.Time) string {
 	d := t.Sub(now)
 	if d < 0 {
@@ -99,7 +195,8 @@ func fmtLocal(t time.Time, layout string) string {
 	return t.Local().Format(layout)
 }
 
-// fmtDue renders an optional due time as "2006-01-02 (in 3d)".
+// fmtDue renders an optional due time as "<date> (<relative>)", colored by
+// urgency: red when overdue, yellow when due within a day.
 func fmtDue(due *time.Time, now time.Time) string {
 	if due == nil {
 		return dim("-")

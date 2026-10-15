@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Align table columns in `iflow task list`, `iflow task today`,
+  `iflow remind list` and `iflow cmd list` when ANSI colors are enabled.
+  The renderer previously measured color escape sequences as visible width,
+  which pushed columns out of line; it now measures visible width and accounts
+  for East Asian wide (CJK) runes too.
+
+### Changed
+
+- Relative due times spell out their unit (`in 13 hrs`, `12 hrs overdue`)
+  instead of `in 13h` / `12h overdue`, so a span of minutes is not mistaken
+  for months.
+
 ## [0.1.0] - 2026-10-15
 
 The first public release. `iflow` combines task planning, reminders, and a
