@@ -67,6 +67,25 @@ internal/buildinfo   identity + build-time variables
 - Update `CHANGELOG.md` under `## [Unreleased]` for user-visible changes.
 - Update the relevant file in `docs/` when behavior or commands change.
 
+## Translations
+
+User-facing strings are written in English and looked up in
+`internal/i18n`. To translate a string, add an entry to the catalog for that
+locale (for example `internal/i18n/catalog_zh.go`), using the English text as
+the key and keeping the same format verbs (`%s`, `%d`):
+
+```go
+"added task %s": "已添加任务 %s",
+```
+
+Strings without an entry fall back to English, so a partial catalog is fine.
+Command descriptions and flag usage are translated automatically by
+`cli.localizeTree`; only the catalog needs updating. Command names, flag names,
+`--json` keys and stored data are never translated.
+
+When adding a new user-facing string, prefer passing it through `i18n.T` /
+`i18n.Tf` at the point it is produced.
+
 ## Release process
 
 Maintainers:

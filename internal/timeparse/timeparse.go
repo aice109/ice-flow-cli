@@ -7,11 +7,12 @@ package timeparse
 
 import (
 	"errors"
-	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/aice109/ice-flow-cli/internal/i18n"
 )
 
 var durUnitRe = regexp.MustCompile(`(\d+(?:\.\d+)?)\s*(w|d|h|m|s)`)
@@ -21,11 +22,11 @@ var durUnitRe = regexp.MustCompile(`(\d+(?:\.\d+)?)\s*(w|d|h|m|s)`)
 func ParseDuration(s string) (time.Duration, error) {
 	s = strings.TrimSpace(strings.ToLower(s))
 	if s == "" {
-		return 0, errors.New("empty duration")
+		return 0, errors.New(i18n.T("empty duration"))
 	}
 	matches := durUnitRe.FindAllStringSubmatch(s, -1)
 	if len(matches) == 0 {
-		return 0, fmt.Errorf("invalid duration %q", s)
+		return 0, errors.New(i18n.Tf("invalid duration %q", s))
 	}
 	// Reject trailing junk like "30mmx" by ensuring the matched span covers
 	// everything once whitespace is removed.
@@ -54,7 +55,7 @@ func ParseDuration(s string) (time.Duration, error) {
 		total += time.Duration(v * float64(unit))
 	}
 	if strings.NewReplacer(" ", "", "\t", "").Replace(covered.String()) != stripped {
-		return 0, fmt.Errorf("invalid duration %q", s)
+		return 0, errors.New(i18n.Tf("invalid duration %q", s))
 	}
 	return total, nil
 }
@@ -73,7 +74,7 @@ var layouts = []string{
 func ParseWhen(expr string, now time.Time) (time.Time, error) {
 	orig := strings.TrimSpace(expr)
 	if orig == "" {
-		return time.Time{}, errors.New("empty time")
+		return time.Time{}, errors.New(i18n.T("empty time"))
 	}
 	lower := strings.ToLower(orig)
 
@@ -123,7 +124,7 @@ func ParseWhen(expr string, now time.Time) (time.Time, error) {
 	rest := strings.Join(tokens, " ")
 	if rest == "" {
 		if !daySet {
-			return time.Time{}, fmt.Errorf("unrecognized time %q", orig)
+			return time.Time{}, errors.New(i18n.Tf("unrecognized time %q", orig))
 		}
 		if sameDay(base, now) {
 			return now, nil
@@ -133,7 +134,7 @@ func ParseWhen(expr string, now time.Time) (time.Time, error) {
 
 	h, mi, ok := parseClock(rest)
 	if !ok {
-		return time.Time{}, fmt.Errorf("unrecognized time %q", orig)
+		return time.Time{}, errors.New(i18n.Tf("unrecognized time %q", orig))
 	}
 	if !daySet {
 		base = startOfDay(now)

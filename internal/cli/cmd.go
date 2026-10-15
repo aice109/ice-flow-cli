@@ -2,6 +2,7 @@ package cli
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/aice109/ice-flow-cli/internal/i18n"
 	"github.com/aice109/ice-flow-cli/internal/store"
 )
 
@@ -19,9 +21,8 @@ func (a *App) snippetCmd() *cobra.Command {
 		Use:     "cmd",
 		Aliases: []string{"cmds", "snippet"},
 		Short:   "Manage your command dictionary",
-		Long: `Store commands together with an explanation so you can recall them later.
-
-Search them with ` + "`iflow find <query>`" + ` and run one with ` + "`iflow run <query>`" + `.`,
+		Long: i18n.T("Store commands together with an explanation so you can recall them later.") + "\n\n" +
+			i18n.T("Search them with `iflow find <query>` and run one with `iflow run <query>`."),
 	}
 	cmd.AddCommand(
 		a.snippetAddCmd(),
@@ -59,7 +60,7 @@ func (a *App) snippetAddCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Printf("added command %s\n", bold("#"+strconv.FormatInt(id, 10)))
+			fmt.Println(i18n.Tf("added command %s", bold("#"+strconv.FormatInt(id, 10))))
 			return nil
 		},
 	}
@@ -75,7 +76,9 @@ func (a *App) snippetListCmd() *cobra.Command {
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Short:   "List stored commands",
-		Args:    cobra.NoArgs,
+		Example: `  iflow cmd list
+  iflow cmd list --json`,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			st, err := a.openStore()
 			if err != nil {
@@ -89,7 +92,7 @@ func (a *App) snippetListCmd() *cobra.Command {
 				return printJSON(snippetsJSON(snippets))
 			}
 			if len(snippets) == 0 {
-				fmt.Println(dim("No commands yet. Add one with `iflow cmd add`."))
+				fmt.Println(dim(i18n.T("No commands yet. Add one with `iflow cmd add`.")))
 				return nil
 			}
 			rows := make([][]string, 0, len(snippets))
@@ -102,7 +105,7 @@ func (a *App) snippetListCmd() *cobra.Command {
 					tagsLabel(sn.Tags),
 				})
 			}
-			printTable([]string{dim("ID"), dim("Uses"), dim("Command"), dim("Description"), dim("Tags")}, rows)
+			printTable([]string{dim(i18n.T("ID")), dim(i18n.T("Uses")), dim(i18n.T("Command")), dim(i18n.T("Description")), dim(i18n.T("Tags"))}, rows)
 			return nil
 		},
 	}
@@ -112,9 +115,10 @@ func (a *App) snippetEditCmd() *cobra.Command {
 	var command, desc, example, shell string
 	var tags []string
 	cmd := &cobra.Command{
-		Use:   "edit <id>",
-		Short: "Edit a stored command",
-		Args:  cobra.ExactArgs(1),
+		Use:     "edit <id>",
+		Short:   "Edit a stored command",
+		Example: `  iflow cmd edit 4 -d "updated description" -t git`,
+		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			id, err := parseID(args[0])
 			if err != nil {
@@ -146,7 +150,7 @@ func (a *App) snippetEditCmd() *cobra.Command {
 			if err := st.UpdateSnippet(sn); err != nil {
 				return err
 			}
-			fmt.Printf("updated command #%d\n", id)
+			fmt.Println(i18n.Tf("updated command #%d", id))
 			return nil
 		},
 	}
@@ -163,6 +167,7 @@ func (a *App) snippetRmCmd() *cobra.Command {
 		Use:     "rm <id>",
 		Aliases: []string{"delete", "remove"},
 		Short:   "Delete a stored command",
+		Example: "  iflow cmd rm 4",
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			id, err := parseID(args[0])
@@ -176,7 +181,7 @@ func (a *App) snippetRmCmd() *cobra.Command {
 			if err := st.DeleteSnippet(id); err != nil {
 				return err
 			}
-			fmt.Printf("deleted command #%d\n", id)
+			fmt.Println(i18n.Tf("deleted command #%d", id))
 			return nil
 		},
 	}
@@ -186,10 +191,12 @@ func (a *App) snippetImportCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "import <file>",
 		Short: "Import commands from a JSON or Markdown file",
-		Long: "Import commands from a file. Two formats are accepted:\n\n" +
+		Long: i18n.T("Import commands from a file. Two formats are accepted:") + "\n\n" +
 			"JSON:  [{\"command\":\"flutter doctor\",\"description\":\"...\",\"tags\":[\"flutter\"],\"example\":\"...\"}]\n" +
-			"Text:  one command per line, \"command :: description :: tag1,tag2\"\n" +
-			"       Markdown list items like \"- `command` - description\" also work.",
+			i18n.T("Text:  one command per line, \"command :: description :: tag1,tag2\"") + "\n" +
+			i18n.T("       Markdown list items like \"- `command` - description\" also work."),
+		Example: `  iflow cmd import ~/notes.md
+  iflow cmd import commands.json`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			data, err := os.ReadFile(args[0])
@@ -211,7 +218,7 @@ func (a *App) snippetImportCmd() *cobra.Command {
 				}
 				added++
 			}
-			fmt.Printf("imported %d commands\n", added)
+			fmt.Println(i18n.Tf("imported %d commands", added))
 			return nil
 		},
 	}
@@ -222,7 +229,9 @@ func (a *App) snippetExportCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "export",
 		Short: "Export commands as JSON or Markdown",
-		Args:  cobra.NoArgs,
+		Example: `  iflow cmd export --format md > commands.md
+  iflow cmd export -f json`,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			st, err := a.openStore()
 			if err != nil {
@@ -234,9 +243,9 @@ func (a *App) snippetExportCmd() *cobra.Command {
 			}
 			switch strings.ToLower(format) {
 			case "json":
-				return printJSON(snippets)
+				return printJSON(snippetsJSON(snippets))
 			case "md", "markdown":
-				fmt.Println("# iflow command dictionary")
+				fmt.Println(i18n.T("# iflow command dictionary"))
 				fmt.Println()
 				for _, sn := range snippets {
 					fmt.Printf("- `%s`", sn.Command)
@@ -245,15 +254,15 @@ func (a *App) snippetExportCmd() *cobra.Command {
 					}
 					fmt.Println()
 					if len(sn.Tags) > 0 {
-						fmt.Printf("  - tags: %s\n", strings.Join(sn.Tags, ", "))
+						fmt.Println(i18n.Tf("  - tags: %s", strings.Join(sn.Tags, ", ")))
 					}
 					if sn.Example != "" {
-						fmt.Printf("  - example: `%s`\n", sn.Example)
+						fmt.Println(i18n.Tf("  - example: `%s`", sn.Example))
 					}
 				}
 				return nil
 			default:
-				return fmt.Errorf("unknown format %q (use json or md)", format)
+				return errors.New(i18n.Tf("unknown format %q (use json or md)", format))
 			}
 		},
 	}

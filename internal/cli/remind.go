@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/aice109/ice-flow-cli/internal/i18n"
 	"github.com/aice109/ice-flow-cli/internal/notify"
 	"github.com/aice109/ice-flow-cli/internal/recur"
 	"github.com/aice109/ice-flow-cli/internal/store"
@@ -20,7 +22,7 @@ func (a *App) remindCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "remind",
 		Short: "Schedule notifications",
-		Long:  "Schedule one-shot or recurring reminders. Install the background job with `iflow service install` so they fire even when iflow is not running.",
+		Long:  i18n.T("Schedule one-shot or recurring reminders. Install the background job with `iflow service install` so they fire even when iflow is not running."),
 	}
 	cmd.AddCommand(
 		a.remindAddCmd(),
@@ -86,19 +88,19 @@ func (a *App) remindAddCmd() *cobra.Command {
 					return err
 				}
 			default:
-				return fmt.Errorf("provide --at, --in or --every")
+				return errors.New(i18n.T("provide --at, --in or --every"))
 			}
 
 			id, err := st.CreateReminder(r)
 			if err != nil {
 				return err
 			}
-			repeat := "once"
+			repeat := i18n.T("once")
 			if r.RRule != "" {
 				repeat = r.RRule
 			}
-			fmt.Printf("added reminder %s (next %s, %s)\n",
-				bold(fmt.Sprintf("#%d", id)), fmtLocal(r.NextAt, "2006-01-02 15:04"), repeat)
+			fmt.Println(i18n.Tf("added reminder %s (next %s, %s)",
+				bold(fmt.Sprintf("#%d", id)), fmtLocal(r.NextAt, "2006-01-02 15:04"), repeat))
 			return nil
 		},
 	}
@@ -115,7 +117,9 @@ func (a *App) remindListCmd() *cobra.Command {
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Short:   "List reminders",
-		Args:    cobra.NoArgs,
+		Example: `  iflow remind list
+  iflow remind list --all`,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			st, err := a.openStore()
 			if err != nil {
@@ -129,21 +133,21 @@ func (a *App) remindListCmd() *cobra.Command {
 				return printJSON(remindersJSON(rs))
 			}
 			if len(rs) == 0 {
-				fmt.Println(dim("No reminders."))
+				fmt.Println(dim(i18n.T("No reminders.")))
 				return nil
 			}
 			now := time.Now()
 			rows := make([][]string, 0, len(rs))
 			for _, r := range rs {
-				state := green("on")
+				state := green(i18n.T("on"))
 				if !r.Enabled {
-					state = dim("off")
+					state = dim(i18n.T("off"))
 				}
-				repeat := "once"
+				repeat := i18n.T("once")
 				if r.RRule != "" {
 					repeat = r.RRule
 				}
-				next := dim("paused")
+				next := dim(i18n.T("paused"))
 				if r.Enabled {
 					next = fmt.Sprintf("%s (%s)", fmtLocal(r.NextAt, "2006-01-02 15:04"), relTime(r.NextAt, now))
 				}
@@ -151,7 +155,7 @@ func (a *App) remindListCmd() *cobra.Command {
 					strconv.FormatInt(r.ID, 10), state, next, repeat, r.Title,
 				})
 			}
-			printTable([]string{dim("ID"), dim("State"), dim("Next"), dim("Repeat"), dim("Title")}, rows)
+			printTable([]string{dim(i18n.T("ID")), dim(i18n.T("State")), dim(i18n.T("Next")), dim(i18n.T("Repeat")), dim(i18n.T("Title"))}, rows)
 			return nil
 		},
 	}
@@ -164,6 +168,7 @@ func (a *App) remindRmCmd() *cobra.Command {
 		Use:     "rm <id>",
 		Aliases: []string{"delete", "remove"},
 		Short:   "Delete a reminder",
+		Example: "  iflow remind rm 3",
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			id, err := parseID(args[0])
@@ -177,7 +182,7 @@ func (a *App) remindRmCmd() *cobra.Command {
 			if err := st.DeleteReminder(id); err != nil {
 				return err
 			}
-			fmt.Printf("deleted reminder #%d\n", id)
+			fmt.Println(i18n.Tf("deleted reminder #%d", id))
 			return nil
 		},
 	}
@@ -187,7 +192,9 @@ func (a *App) remindSnoozeCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "snooze <id> <duration>",
 		Short: "Push a reminder forward (e.g. snooze 3 10m)",
-		Args:  cobra.ExactArgs(2),
+		Example: `  iflow remind snooze 3 10m
+  iflow remind snooze 3 2h`,
+		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			id, err := parseID(args[0])
 			if err != nil {
@@ -205,7 +212,7 @@ func (a *App) remindSnoozeCmd() *cobra.Command {
 			if err := st.SnoozeReminder(id, next); err != nil {
 				return err
 			}
-			fmt.Printf("snoozed #%d until %s\n", id, fmtLocal(next, "2006-01-02 15:04"))
+			fmt.Println(i18n.Tf("snoozed #%d until %s", id, fmtLocal(next, "2006-01-02 15:04")))
 			return nil
 		},
 	}
@@ -213,9 +220,10 @@ func (a *App) remindSnoozeCmd() *cobra.Command {
 
 func (a *App) remindToggleCmd(name string, enabled bool) *cobra.Command {
 	return &cobra.Command{
-		Use:   name + " <id>",
-		Short: name + " a reminder",
-		Args:  cobra.ExactArgs(1),
+		Use:     name + " <id>",
+		Short:   name + " a reminder",
+		Example: "  iflow remind " + name + " 3",
+		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			id, err := parseID(args[0])
 			if err != nil {
@@ -228,7 +236,7 @@ func (a *App) remindToggleCmd(name string, enabled bool) *cobra.Command {
 			if err := st.SetReminderEnabled(id, enabled); err != nil {
 				return err
 			}
-			fmt.Printf("reminder #%d %sd\n", id, name)
+			fmt.Println(i18n.Tf("reminder #%d %sd", id, i18n.T(name)))
 			return nil
 		},
 	}
@@ -242,10 +250,8 @@ func (a *App) remindDaemonCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "daemon",
 		Short: "Fire due reminders (running loop, or --tick for a single pass)",
-		Long: `Runs the reminder scheduler.
-
-With --tick it performs a single pass and exits, which is what the installed
-background job calls every minute. Without --tick it loops in the foreground.`,
+		Long: i18n.T("Runs the reminder scheduler.") + "\n\n" +
+			i18n.T("With --tick it performs a single pass and exits, which is what the installed background job calls every minute. Without --tick it loops in the foreground."),
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			st, err := a.openStore()
@@ -263,7 +269,7 @@ background job calls every minute. Without --tick it loops in the foreground.`,
 				fire()
 				return nil
 			}
-			fmt.Printf("iflow daemon started (every %s); press Ctrl-C to stop\n", interval)
+			fmt.Println(i18n.Tf("iflow daemon started (every %s); press Ctrl-C to stop", interval))
 			ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 			defer stop()
 			fire()
@@ -272,7 +278,7 @@ background job calls every minute. Without --tick it loops in the foreground.`,
 			for {
 				select {
 				case <-ctx.Done():
-					fmt.Println("iflow daemon stopped")
+					fmt.Println(i18n.T("iflow daemon stopped"))
 					return nil
 				case <-ticker.C:
 					fire()
@@ -296,7 +302,7 @@ func (a *App) tick(st *store.Store) (int, error) {
 	for _, r := range due {
 		body := r.Notes
 		if body == "" {
-			body = "iflow reminder"
+			body = i18n.T("iflow reminder")
 		}
 		if err := notifier.Send(r.Title, body); err != nil {
 			fmt.Fprintf(os.Stderr, "notify #%d: %v\n", r.ID, err)
@@ -320,7 +326,7 @@ func (a *App) tick(st *store.Store) (int, error) {
 func parseID(s string) (int64, error) {
 	id, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
-		return 0, fmt.Errorf("invalid id %q", s)
+		return 0, errors.New(i18n.Tf("invalid id %q", s))
 	}
 	return id, nil
 }

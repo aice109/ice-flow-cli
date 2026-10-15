@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Simplified Chinese interface.** Switch with `--lang zh-CN`, the
+  `IFLOW_LANG` environment variable, or `iflow config set lang zh-CN`. The
+  default, `auto`, follows `LC_ALL` / `LC_MESSAGES` / `LANG`, so a
+  `zh_CN.UTF-8` locale is translated with no configuration. Help text, flag
+  descriptions, table headers, status messages and errors are all covered;
+  command and flag names, `--json` keys and stored data stay in English.
+- Top-level `iflow --help` now groups commands into **Planning**,
+  **Dictionary**, **Maintenance** and **Help**, and more commands carry usage
+  examples.
+
 ### Fixed
 
 - Align table columns in `iflow task list`, `iflow task today`,
@@ -17,7 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `--json` output now renders timestamps in the local timezone with an explicit
   offset (`2026-10-16T09:00:00+08:00`) instead of UTC (`2026-10-16T01:00:00Z`),
   so it matches both what you entered and the table view. Tasks and reminders
-  are still stored in UTC internally.
+  are still stored in UTC internally. This also applies to `iflow cmd export`.
 - Recurring reminders now advance on the local wall clock. Previously the
   next occurrence was computed from the UTC-stored anchor, so in UTC+8 a
   `--every monday --at 00:30` reminder fired on Tuesday.
@@ -29,6 +41,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Relative due times spell out their unit (`in 13 hrs`, `12 hrs overdue`)
   instead of `in 13h` / `12h overdue`, so a span of minutes is not mistaken
   for months.
+- Config keys are listed alphabetically in `iflow config` and in the
+  `unknown key` error, and now include `lang`.
 
 ## [0.1.0] - 2026-10-15
 

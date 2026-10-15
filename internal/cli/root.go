@@ -4,11 +4,13 @@ package cli
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/aice109/ice-flow-cli/internal/buildinfo"
 	"github.com/aice109/ice-flow-cli/internal/config"
+	"github.com/aice109/ice-flow-cli/internal/i18n"
 	"github.com/aice109/ice-flow-cli/internal/store"
 )
 
@@ -20,14 +22,24 @@ type App struct {
 	flagDB      string
 	flagJSON    bool
 	flagNoColor bool
+	flagLang    string
 }
 
 // Execute runs the CLI and returns a process exit code.
 func Execute() int {
+	locale, err := resolveLocale(os.Args[1:])
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s: %v\n", buildinfo.AppName, err)
+		return 1
+	}
+	i18n.SetLocale(locale)
+
 	a := &App{}
 	root := a.rootCmd()
+	localizeTree(root)
+
 	if err := root.Execute(); err != nil {
-		fmt.Fprintf(os.Stderr, "%s: %v\n", buildinfo.AppName, err)
+		fmt.Fprintf(os.Stderr, "%s: %s\n", buildinfo.AppName, localizeError(err))
 		return 1
 	}
 	if a.Store != nil {
@@ -36,14 +48,68 @@ func Execute() int {
 	return 0
 }
 
+// resolveLocale picks the output language before the command tree is built, so
+// help text and flag descriptions are translated as well. Priority: the --lang
+// flag, IFLOW_LANG, the config file, then the POSIX locale environment.
+func resolveLocale(args []string) (string, error) {
+	fallback := fallbackLocale()
+	flagLang := scanLangFlag(args)
+	if isAuto(flagLang) {
+		return fallback, nil
+	}
+	if c := i18n.Canonical(flagLang); c != "" {
+		return c, nil
+	}
+	// An explicit but unsupported value is a user error: report it in the
+	// language we would otherwise have used.
+	i18n.SetLocale(fallback)
+	return "", fmt.Errorf("%s", i18n.Tf("unsupported language %q (supported: %s)",
+		flagLang, strings.Join(i18n.Supported(), ", ")))
+}
+
+// fallbackLocale resolves the locale from everything except the --lang flag.
+func fallbackLocale() string {
+	if c := i18n.Canonical(os.Getenv("IFLOW_LANG")); c != "" {
+		return c
+	}
+	if cfg, err := config.Load(); err == nil {
+		if c := i18n.Canonical(cfg.Lang); c != "" {
+			return c
+		}
+	}
+	return i18n.Detect(os.Getenv)
+}
+
+// scanLangFlag finds --lang in the raw arguments, before cobra parses anything.
+func scanLangFlag(args []string) string {
+	for i := 0; i < len(args); i++ {
+		switch a := args[i]; {
+		case a == "--":
+			return ""
+		case strings.HasPrefix(a, "--lang="):
+			return strings.TrimPrefix(a, "--lang=")
+		case a == "--lang" && i+1 < len(args):
+			return args[i+1]
+		}
+	}
+	return ""
+}
+
+func isAuto(s string) bool {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "", "auto":
+		return true
+	}
+	return false
+}
+
 func (a *App) rootCmd() *cobra.Command {
 	root := &cobra.Command{
 		Use:   buildinfo.AppName,
-		Short: buildinfo.Description,
-		Long: buildinfo.AppName + " — " + buildinfo.Description + `
-
-Tasks, reminders and a personal command dictionary, all stored locally.
-Run without arguments for a quick overview of today.`,
+		Short: i18n.T(buildinfo.Description),
+		Long: buildinfo.AppName + " — " + i18n.T(buildinfo.Description) + "\n\n" +
+			i18n.T("Tasks, reminders and a personal command dictionary, all stored locally.") + "\n" +
+			i18n.T("Run without arguments for a quick overview of today."),
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
@@ -63,10 +129,13 @@ Run without arguments for a quick overview of today.`,
 			return nil
 		},
 	}
+	root.SetUsageTemplate(usageTemplate)
+
 	pf := root.PersistentFlags()
 	pf.StringVar(&a.flagDB, "db", "", "path to the SQLite database (default: XDG data dir)")
 	pf.BoolVar(&a.flagJSON, "json", false, "emit JSON instead of tables where supported")
 	pf.BoolVar(&a.flagNoColor, "no-color", false, "disable ANSI colors")
+	pf.StringVar(&a.flagLang, "lang", "auto", "language for output: auto, en, zh-CN")
 
 	root.AddCommand(
 		a.versionCmd(),
@@ -80,6 +149,7 @@ Run without arguments for a quick overview of today.`,
 		a.serviceCmd(),
 		a.configCmd(),
 	)
+	addGroups(root)
 	return root
 }
 
@@ -119,10 +189,12 @@ func (a *App) versionCmd() *cobra.Command {
 				})
 			}
 			fmt.Printf("%s %s\n", buildinfo.AppName, buildinfo.Version)
-			fmt.Printf("  commit:   %s\n", buildinfo.Commit)
-			fmt.Printf("  built:    %s\n", buildinfo.Date)
-			fmt.Printf("  platform: %s\n", buildinfo.Platform())
-			fmt.Printf("  home:     %s\n", buildinfo.RepoURL)
+			printTable(nil, [][]string{
+				{i18n.T("commit:"), buildinfo.Commit},
+				{i18n.T("built:"), buildinfo.Date},
+				{i18n.T("platform:"), buildinfo.Platform()},
+				{i18n.T("home:"), buildinfo.RepoURL},
+			})
 			return nil
 		},
 	}
@@ -143,11 +215,11 @@ func (a *App) initCmd() *cobra.Command {
 			}
 			cfgPath := config.ConfigPath()
 			if created {
-				fmt.Println("created " + cfgPath)
+				fmt.Println(i18n.Tf("created %s", cfgPath))
 			} else {
-				fmt.Println("config already exists " + cfgPath)
+				fmt.Println(i18n.Tf("config already exists %s", cfgPath))
 			}
-			fmt.Println("database ready at " + config.DBPath())
+			fmt.Println(i18n.Tf("database ready at %s", config.DBPath()))
 			return nil
 		},
 	}

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	"github.com/aice109/ice-flow-cli/internal/config"
+	"github.com/aice109/ice-flow-cli/internal/i18n"
 )
 
 func plistPath() string {
@@ -62,11 +63,11 @@ func install(exe string) (string, error) {
 	_ = exec.Command("launchctl", "bootout", serviceTarget()).Run()
 	if out, err := exec.Command("launchctl", "bootstrap", domainTarget(), p).CombinedOutput(); err != nil {
 		if out2, err2 := exec.Command("launchctl", "load", "-w", p).CombinedOutput(); err2 != nil {
-			return "", fmt.Errorf("launchctl bootstrap failed: %v (%s); load failed: %v (%s)", err, out, err2, out2)
+			return "", fmt.Errorf("launchctl bootstrap: %v (%s); launchctl load: %v (%s)", err, out, err2, out2)
 		}
 	}
 	_ = exec.Command("launchctl", "enable", serviceTarget()).Run()
-	return fmt.Sprintf("installed launchd agent %s\n  plist:  %s\n  action: %s remind daemon --tick (every 60s)", Label(), p, exe), nil
+	return i18n.Tf("installed launchd agent %s\n  plist:  %s\n  action: %s remind daemon --tick (every 60s)", Label(), p, exe), nil
 }
 
 func uninstall() (string, error) {
@@ -76,16 +77,16 @@ func uninstall() (string, error) {
 	if err := os.Remove(p); err != nil && !os.IsNotExist(err) {
 		return "", err
 	}
-	return fmt.Sprintf("removed launchd agent %s", Label()), nil
+	return i18n.Tf("removed launchd agent %s", Label()), nil
 }
 
 func status() (string, error) {
 	p := plistPath()
 	if _, err := os.Stat(p); err != nil {
-		return fmt.Sprintf("not installed\n  (no plist at %s)", p), nil
+		return i18n.Tf("not installed\n  (no plist at %s)", p), nil
 	}
 	if _, err := exec.Command("launchctl", "print", serviceTarget()).CombinedOutput(); err != nil {
-		return fmt.Sprintf("installed but not loaded\n  plist: %s", p), nil
+		return i18n.Tf("installed but not loaded\n  plist: %s", p), nil
 	}
-	return fmt.Sprintf("installed and loaded\n  plist: %s", p), nil
+	return i18n.Tf("installed and loaded\n  plist: %s", p), nil
 }

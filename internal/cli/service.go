@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/aice109/ice-flow-cli/internal/i18n"
 	"github.com/aice109/ice-flow-cli/internal/service"
 )
 
@@ -13,16 +14,15 @@ func (a *App) serviceCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "service",
 		Short: "Manage the background reminder job",
-		Long: `Install a background job that runs ` + "`iflow remind daemon --tick`" + ` every
-minute so reminders fire even when the CLI is closed.
-
-macOS: launchd agent. Linux: systemd --user timer (crontab fallback).`,
+		Long: i18n.T("Install a background job that runs `iflow remind daemon --tick` every minute so reminders fire even when the CLI is closed.") + "\n\n" +
+			i18n.T("macOS: launchd agent. Linux: systemd --user timer (crontab fallback)."),
 	}
 	var install bool
 	installCmd := &cobra.Command{
-		Use:   "install",
-		Short: "Install the background reminder job",
-		Args:  cobra.NoArgs,
+		Use:     "install",
+		Short:   "Install the background reminder job",
+		Example: "  iflow service install",
+		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			exe, err := os.Executable()
 			if err != nil {
@@ -53,9 +53,10 @@ macOS: launchd agent. Linux: systemd --user timer (crontab fallback).`,
 		},
 	}
 	statusCmd := &cobra.Command{
-		Use:   "status",
-		Short: "Show the background job status",
-		Args:  cobra.NoArgs,
+		Use:     "status",
+		Short:   "Show the background job status",
+		Example: "  iflow service status",
+		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			desc, err := service.Status()
 			if err != nil {

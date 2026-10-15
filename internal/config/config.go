@@ -30,6 +30,9 @@ type Config struct {
 	UpdateChannel string `toml:"update_channel"`
 	// GitHubRepo is the owner/repo slug the self-updater queries.
 	GitHubRepo string `toml:"github_repo"`
+	// Lang is the output language: auto|en|zh-CN. "auto" follows the POSIX
+	// locale environment.
+	Lang string `toml:"lang"`
 }
 
 // Default returns the built-in configuration.
@@ -42,6 +45,7 @@ func Default() Config {
 		AutoUpdateCheck: true,
 		UpdateChannel:   "stable",
 		GitHubRepo:      buildinfo.RepoSlug,
+		Lang:            "auto",
 	}
 }
 

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aice109/ice-flow-cli/internal/i18n"
 	"github.com/aice109/ice-flow-cli/internal/store"
 )
 
@@ -164,30 +165,38 @@ func humanDur(d time.Duration) string {
 	}
 	switch {
 	case d < time.Minute:
-		return "<1 min"
+		return i18n.T("<1 min")
 	case d < time.Hour:
-		return plural(int(d.Minutes()), "min")
+		return unitDur(int(d.Minutes()), "%d min", "%d mins")
 	case d < 24*time.Hour:
-		return plural(int(d.Hours()), "hr")
+		return unitDur(int(d.Hours()), "%d hr", "%d hrs")
 	default:
-		return plural(int(d.Hours()/24), "day")
+		return unitDur(int(d.Hours()/24), "%d day", "%d days")
 	}
 }
 
-func plural(n int, unit string) string {
+// unitDur picks the singular or plural English form and translates it. Chinese
+// maps both forms to the same string.
+func unitDur(n int, singular, plural string) string {
 	if n == 1 {
-		return fmt.Sprintf("%d %s", n, unit)
+		return i18n.Tf(singular, n)
 	}
-	return fmt.Sprintf("%d %ss", n, unit)
+	return i18n.Tf(plural, n)
 }
 
-// relTime describes a time relative to now, e.g. "in 13 hr" or "5 min overdue".
+// relTime describes a time relative to now, e.g. "in 13 hrs" or "5 mins overdue".
 func relTime(t, now time.Time) string {
 	d := t.Sub(now)
 	if d < 0 {
-		return humanDur(d) + " overdue"
+		if -d < time.Minute {
+			return i18n.T("<1 min overdue")
+		}
+		return i18n.Tf("%s overdue", humanDur(d))
 	}
-	return "in " + humanDur(d)
+	if d < time.Minute {
+		return i18n.T("in <1 min")
+	}
+	return i18n.Tf("in %s", humanDur(d))
 }
 
 // fmtLocal renders a time in the local timezone using layout.

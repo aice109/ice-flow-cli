@@ -33,6 +33,8 @@ $ iflow find doctor
   recall it with fuzzy search (`iflow find doctor`) or run it (`iflow run doctor`).
 - **Self-updating** — `iflow update` checks GitHub Releases, verifies the
   checksum, and replaces itself atomically.
+- **Bilingual interface** — English and Simplified Chinese, switched with
+  `--lang`, `IFLOW_LANG`, or the `lang` config key.
 - **Local-first** — a single SQLite database, XDG-compliant paths, no network
   except for the update check.
 
@@ -162,9 +164,25 @@ default_priority  = 2
 notify            = "auto"            # auto|osascript|notify-send|stdout|off
 auto_update_check = true
 github_repo       = "aice109/ice-flow-cli"
+lang              = "auto"            # auto|en|zh-CN
 ```
 
 Edit it directly, or with `iflow config set <key> <value>`.
+
+### Language
+
+The interface is available in English and Simplified Chinese:
+
+```console
+$ iflow --lang zh-CN remind list
+ID  状态  下次                          重复                              标题
+1   启用  2026-10-16 09:30 (10 小时后)  FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR  站会
+```
+
+Pick it with `--lang`, the `IFLOW_LANG` environment variable, or
+`iflow config set lang zh-CN`. The default, `auto`, follows your locale
+environment, so `LANG=zh_CN.UTF-8` is enough. Command names, flags and `--json`
+keys stay in English for scriptability.
 
 ## Documentation
 

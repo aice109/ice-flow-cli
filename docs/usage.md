@@ -10,6 +10,7 @@
 - [`iflow service`](#service)
 - [`iflow update`](#update)
 - [`iflow config` and `iflow init`](#config)
+- [Language](#language)
 
 Global flags apply to every command:
 
@@ -17,12 +18,18 @@ Global flags apply to every command:
 | --- | --- |
 | `--db <path>` | Use a specific SQLite database file |
 | `--json` | Emit JSON where supported (lists, `version`) |
+| `--lang <tag>` | Output language: `auto` (default), `en`, `zh-CN` |
 | `--no-color` | Disable ANSI colors (also respects `NO_COLOR`) |
 
 `--json` renders every timestamp in your local timezone as RFC3339 with an
 explicit offset (for example `2026-10-16T09:00:00+08:00`). Tasks and reminders
 are stored in UTC internally; the local offset is applied for display and
 output only.
+
+`--help` describes one level at a time, the way `git` and `kubectl` do: the
+top-level list is grouped (`Planning`, `Dictionary`, `Maintenance`, `Help`) and
+`iflow task --help` drills into that group. `iflow help task add` reaches a
+command by path.
 
 ## Overview
 
@@ -199,5 +206,22 @@ iflow config get notify
 iflow config set notify stdout
 ```
 
-Keys: `date_format`, `default_priority`, `notify`, `notify_sound`,
-`auto_update_check`, `update_channel`, `github_repo`.
+Keys: `auto_update_check`, `date_format`, `default_priority`, `github_repo`,
+`lang`, `notify`, `notify_sound`, `update_channel`.
+
+## Language
+
+Output defaults to English, but the interface can be switched to Simplified
+Chinese. Resolution order, first match wins:
+
+1. `--lang <tag>` on the command line (`iflow --lang zh-CN task list`).
+2. the `IFLOW_LANG` environment variable.
+3. the `lang` config key (`iflow config set lang zh-CN`).
+4. the POSIX locale environment (`LC_ALL`, `LC_MESSAGES`, then `LANG`).
+5. English.
+
+`auto` (the default) means "follow the environment", so on a machine with
+`LANG=zh_CN.UTF-8` you get Chinese without configuring anything. Supported
+values are `en` and `zh-CN`; regional and encoding forms such as `zh_Hans` or
+`zh_CN.UTF-8` normalize to `zh-CN`. Command names, flags and `--json` keys stay
+in English, so scripts keep working.

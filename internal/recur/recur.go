@@ -11,11 +11,14 @@
 package recur
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/aice109/ice-flow-cli/internal/i18n"
 )
 
 var intervalRe = regexp.MustCompile(`^(\d+)\s*(h|d|w|m)$`)
@@ -64,14 +67,14 @@ func ParseEvery(spec string) (string, error) {
 	for _, part := range strings.Split(s, ",") {
 		code, ok := weekdayCode(part)
 		if !ok {
-			return "", fmt.Errorf("unrecognized recurrence %q", spec)
+			return "", errors.New(i18n.Tf("unrecognized recurrence %q", spec))
 		}
 		codes = append(codes, code)
 	}
 	if len(codes) > 0 {
 		return "FREQ=WEEKLY;BYDAY=" + strings.Join(codes, ","), nil
 	}
-	return "", fmt.Errorf("unrecognized recurrence %q", spec)
+	return "", errors.New(i18n.Tf("unrecognized recurrence %q", spec))
 }
 
 func weekdayCode(s string) (string, bool) {

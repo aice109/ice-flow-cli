@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/aice109/ice-flow-cli/internal/buildinfo"
+	"github.com/aice109/ice-flow-cli/internal/i18n"
 )
 
 const (
@@ -70,12 +71,12 @@ func uninstall() (string, error) {
 		if hasCronEntry() {
 			_ = removeCron()
 		}
-		return fmt.Sprintf("removed systemd user timer %s.timer", unitName), nil
+		return i18n.Tf("removed systemd user timer %s.timer", unitName), nil
 	}
 	if err := removeCron(); err != nil {
 		return "", err
 	}
-	return "removed crontab entry", nil
+	return i18n.T("removed crontab entry"), nil
 }
 
 func status() (string, error) {
@@ -84,16 +85,16 @@ func status() (string, error) {
 		state := strings.TrimSpace(string(out))
 		if err != nil || state != "active" {
 			if _, statErr := os.Stat(timerPath()); statErr == nil {
-				return fmt.Sprintf("installed but not active\n  unit: %s", timerPath()), nil
+				return i18n.Tf("installed but not active\n  unit: %s", timerPath()), nil
 			}
-			return "not installed", nil
+			return i18n.T("not installed"), nil
 		}
-		return fmt.Sprintf("installed and active\n  unit: %s", timerPath()), nil
+		return i18n.Tf("installed and active\n  unit: %s", timerPath()), nil
 	}
 	if hasCronEntry() {
-		return "installed via crontab", nil
+		return i18n.T("installed via crontab"), nil
 	}
-	return "not installed", nil
+	return i18n.T("not installed"), nil
 }
 
 func installSystemd(exe string) (string, error) {
@@ -112,7 +113,7 @@ func installSystemd(exe string) (string, error) {
 	if out, err := exec.Command("systemctl", "--user", "enable", "--now", unitName+".timer").CombinedOutput(); err != nil {
 		return "", fmt.Errorf("systemctl enable --now: %v (%s)", err, out)
 	}
-	return fmt.Sprintf("installed systemd user timer %s.timer\n  unit:   %s\n  action: %s remind daemon --tick (every 60s)", unitName, timerPath(), exe), nil
+	return i18n.Tf("installed systemd user timer %s.timer\n  unit:   %s\n  action: %s remind daemon --tick (every 60s)", unitName, timerPath(), exe), nil
 }
 
 // --- cron fallback --------------------------------------------------------
@@ -141,7 +142,7 @@ func installCron(exe string) (string, error) {
 	existing := readCrontab()
 	line := fmt.Sprintf("* * * * * %s remind daemon --tick >/dev/null 2>&1 %s", exe, cronMarker)
 	if strings.Contains(existing, cronMarker) {
-		return "crontab entry already present", nil
+		return i18n.T("crontab entry already present"), nil
 	}
 	if existing != "" && !strings.HasSuffix(existing, "\n") {
 		existing += "\n"
@@ -149,7 +150,7 @@ func installCron(exe string) (string, error) {
 	if err := writeCrontab(existing + line + "\n"); err != nil {
 		return "", err
 	}
-	return "installed crontab entry (every minute)\n  action: " + exe + " remind daemon --tick", nil
+	return i18n.Tf("installed crontab entry (every minute)\n  action: %s remind daemon --tick", exe), nil
 }
 
 func removeCron() error {

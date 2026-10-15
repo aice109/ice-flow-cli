@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/aice109/ice-flow-cli/internal/i18n"
 	"github.com/aice109/ice-flow-cli/internal/store"
 	"github.com/aice109/ice-flow-cli/internal/timeparse"
 )
@@ -16,7 +18,7 @@ func (a *App) taskCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "task",
 		Short: "Plan and track tasks",
-		Long:  "Create, list and complete tasks. Tasks may be nested via --parent and grouped with --project/--tag.",
+		Long:  i18n.T("Create, list and complete tasks. Tasks may be nested via --parent and grouped with --project/--tag."),
 	}
 	cmd.AddCommand(
 		a.taskAddCmd(),
@@ -75,7 +77,7 @@ func (a *App) taskAddCmd() *cobra.Command {
 			}
 			if parent != 0 {
 				if _, err := st.GetTask(parent); err != nil {
-					return fmt.Errorf("parent task %d: %w", parent, err)
+					return fmt.Errorf("%s: %w", i18n.Tf("parent task %d", parent), err)
 				}
 				t.ParentID = &parent
 			}
@@ -83,7 +85,7 @@ func (a *App) taskAddCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Printf("added task %s\n", bold(fmt.Sprintf("#%d", id)))
+			fmt.Println(i18n.Tf("added task %s", bold(fmt.Sprintf("#%d", id))))
 			return nil
 		},
 	}
@@ -107,7 +109,10 @@ func (a *App) taskListCmd() *cobra.Command {
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Short:   "List tasks (open by default; --all includes done)",
-		Args:    cobra.NoArgs,
+		Example: `  iflow task list
+  iflow task list --all
+  iflow task list --project platform --status doing`,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			st, err := a.openStore()
 			if err != nil {
@@ -134,7 +139,9 @@ func (a *App) taskTodayCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "today",
 		Short: "Show overdue, due-today and in-progress tasks",
-		Args:  cobra.NoArgs,
+		Example: `  iflow task today
+  iflow            # same as "task today"`,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return a.runToday(cmd)
 		},
@@ -145,7 +152,9 @@ func (a *App) taskTreeCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "tree",
 		Short: "Show tasks as a hierarchy",
-		Args:  cobra.NoArgs,
+		Example: `  iflow task tree
+  iflow task tree --json`,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			st, err := a.openStore()
 			if err != nil {
@@ -166,13 +175,14 @@ func (a *App) taskTreeCmd() *cobra.Command {
 
 func (a *App) taskStatusCmd(name, short, status string) *cobra.Command {
 	return &cobra.Command{
-		Use:   name + " <id>",
-		Short: short,
-		Args:  cobra.ExactArgs(1),
+		Use:     name + " <id>",
+		Short:   short,
+		Example: "  iflow task " + name + " 12",
+		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			id, err := strconv.ParseInt(args[0], 10, 64)
 			if err != nil {
-				return fmt.Errorf("invalid id %q", args[0])
+				return errors.New(i18n.Tf("invalid id %q", args[0]))
 			}
 			st, err := a.openStore()
 			if err != nil {
@@ -181,7 +191,7 @@ func (a *App) taskStatusCmd(name, short, status string) *cobra.Command {
 			if err := st.SetTaskStatus(id, status); err != nil {
 				return err
 			}
-			fmt.Printf("task #%d -> %s\n", id, status)
+			fmt.Println(i18n.Tf("task #%d -> %s", id, status))
 			return nil
 		},
 	}
@@ -203,11 +213,14 @@ func (a *App) taskEditCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "edit <id>",
 		Short: "Edit a task's fields",
-		Args:  cobra.ExactArgs(1),
+		Example: `  iflow task edit 12 --due tomorrow --prio high
+  iflow task edit 12 --add-tag urgent --rm-tag later
+  iflow task edit 12 --clear-due`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			id, err := strconv.ParseInt(args[0], 10, 64)
 			if err != nil {
-				return fmt.Errorf("invalid id %q", args[0])
+				return errors.New(i18n.Tf("invalid id %q", args[0]))
 			}
 			st, err := a.openStore()
 			if err != nil {
@@ -256,7 +269,7 @@ func (a *App) taskEditCmd() *cobra.Command {
 			if err := st.UpdateTask(t); err != nil {
 				return err
 			}
-			fmt.Printf("updated task #%d\n", id)
+			fmt.Println(i18n.Tf("updated task #%d", id))
 			return nil
 		},
 	}
@@ -279,23 +292,25 @@ func (a *App) taskRmCmd() *cobra.Command {
 		Use:     "rm <id>",
 		Aliases: []string{"delete", "remove"},
 		Short:   "Delete a task (and its subtasks)",
-		Args:    cobra.ExactArgs(1),
+		Example: `  iflow task rm 12
+  iflow task rm 12 --yes`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			id, err := strconv.ParseInt(args[0], 10, 64)
 			if err != nil {
-				return fmt.Errorf("invalid id %q", args[0])
+				return errors.New(i18n.Tf("invalid id %q", args[0]))
 			}
 			st, err := a.openStore()
 			if err != nil {
 				return err
 			}
-			if !yes && !confirm(fmt.Sprintf("Delete task #%d and its subtasks?", id)) {
-				return fmt.Errorf("aborted (use --yes to skip confirmation)")
+			if !yes && !confirm(i18n.Tf("Delete task #%d and its subtasks?", id)) {
+				return errors.New(i18n.T("aborted (use --yes to skip confirmation)"))
 			}
 			if err := st.DeleteTask(id); err != nil {
 				return err
 			}
-			fmt.Printf("deleted task #%d\n", id)
+			fmt.Println(i18n.Tf("deleted task #%d", id))
 			return nil
 		},
 	}
@@ -341,7 +356,7 @@ func (a *App) runToday(cmd *cobra.Command) error {
 		})
 	}
 	if len(overdue) == 0 && len(today) == 0 && len(doing) == 0 {
-		fmt.Println(dim("Nothing on the agenda. Enjoy the quiet."))
+		fmt.Println(dim(i18n.T("Nothing on the agenda. Enjoy the quiet.")))
 		return nil
 	}
 	section := func(title string, ts []store.Task) {
@@ -353,9 +368,9 @@ func (a *App) runToday(cmd *cobra.Command) error {
 		printTable(nil, rows)
 		fmt.Println()
 	}
-	section("Overdue", overdue)
-	section("Due today", today)
-	section("In progress", doing)
+	section(i18n.T("Overdue"), overdue)
+	section(i18n.T("Due today"), today)
+	section(i18n.T("In progress"), doing)
 	return nil
 }
 
@@ -364,10 +379,10 @@ func (a *App) outputTasks(tasks []store.Task) error {
 		return printJSON(tasksJSON(tasks))
 	}
 	if len(tasks) == 0 {
-		fmt.Println(dim("No tasks."))
+		fmt.Println(dim(i18n.T("No tasks.")))
 		return nil
 	}
-	printTable([]string{dim("ID"), "", dim("P"), dim("Due"), dim("Project"), dim("Title"), dim("Tags")}, taskRows(tasks, time.Now()))
+	printTable([]string{dim(i18n.T("ID")), "", dim(i18n.T("P")), dim(i18n.T("Due")), dim(i18n.T("Project")), dim(i18n.T("Title")), dim(i18n.T("Tags"))}, taskRows(tasks, time.Now()))
 	return nil
 }
 
@@ -453,7 +468,7 @@ func parsePriority(s string) (int, error) {
 	if n, err := strconv.Atoi(v); err == nil && n >= 0 && n <= 3 {
 		return n, nil
 	}
-	return 0, fmt.Errorf("invalid priority %q (use p0..p3 or high/med/low)", s)
+	return 0, errors.New(i18n.Tf("invalid priority %q (use p0..p3 or high/med/low)", s))
 }
 
 func parseDue(s string) (time.Time, error) {

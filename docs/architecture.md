@@ -25,6 +25,7 @@ internal/service     launchd / systemd --user / crontab
 internal/update      GitHub Releases self-update
 internal/config      XDG paths + TOML settings
 internal/buildinfo   identity + build-time variables
+internal/i18n        message catalog (en, zh-CN) + locale resolution
 ```
 
 ## Data model
@@ -97,7 +98,25 @@ is injected at build time via `-ldflags` into `internal/buildinfo`.
 
 Downloads and checks are read-only; `iflow update` is the only command that
 writes to the binary. Set `IFLOW_UPDATE_API_URL` to point at a mirror, or
-`IFLOW_GITHUB_TOKEN` to raise API rate limits.
+`IFLOW_GITHUB_TOKEN` to raise API limits.
+
+## Localization
+
+Every user-facing string is written in English in the code and passed through
+`internal/i18n`, which looks it up in a per-locale catalog and falls back to the
+English source when an entry is missing. Cobra's help *templates* are also
+localized: `cli.localizeTree` rewrites command descriptions and flag usage by
+lookup, and a custom usage template renders translated section labels.
+
+The locale is resolved in `cli.Execute` **before** the command tree is built, so
+`iflow --help` is translated too. Unlike flags parsed by cobra, `--lang` is
+pre-scanned from `os.Args`. Precedence is `--lang` → `IFLOW_LANG` → `lang`
+config key → `LC_ALL`/`LC_MESSAGES`/`LANG` → English.
+
+Command names, flag names, `--json` keys, RRULE strings and stored data are
+never translated, so scripts and existing databases keep working. Reminder
+recurrence and timestamp display still follow the local clock, independently of
+the display language.
 
 ## Release pipeline
 

@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -11,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/aice109/ice-flow-cli/internal/fuzzy"
+	"github.com/aice109/ice-flow-cli/internal/i18n"
 	"github.com/aice109/ice-flow-cli/internal/store"
 )
 
@@ -42,7 +44,7 @@ func (a *App) findCmd() *cobra.Command {
 				return printJSON(matchesJSON(matches))
 			}
 			if len(matches) == 0 {
-				fmt.Println(dim("No matching commands."))
+				fmt.Println(dim(i18n.T("No matching commands.")))
 				return nil
 			}
 			if limit > 0 && len(matches) > limit {
@@ -61,7 +63,7 @@ func (a *App) runCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "run <query>",
 		Short: "Run the best matching command",
-		Long:  "Resolves the query against your command dictionary and executes the top match with `sh -c`.",
+		Long:  i18n.T("Resolves the query against your command dictionary and executes the top match with `sh -c`."),
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			st, err := a.openStore()
@@ -73,11 +75,11 @@ func (a *App) runCmd() *cobra.Command {
 				return err
 			}
 			if len(matches) == 0 {
-				return fmt.Errorf("no command matches %q", strings.Join(args, " "))
+				return errors.New(i18n.Tf("no command matches %q", strings.Join(args, " ")))
 			}
 			top := matches[0].Snippet
-			if !yes && !confirm(fmt.Sprintf("Run %q?", top.Command)) {
-				return fmt.Errorf("aborted (use --yes to skip confirmation)")
+			if !yes && !confirm(i18n.Tf("Run %q?", top.Command)) {
+				return errors.New(i18n.T("aborted (use --yes to skip confirmation)"))
 			}
 			fmt.Fprintf(os.Stderr, "%s %s\n", dim("$"), top.Command)
 			c := exec.Command("sh", "-c", top.Command)
@@ -85,7 +87,7 @@ func (a *App) runCmd() *cobra.Command {
 			err = c.Run()
 			_ = st.RecordSnippetUse(top.ID)
 			if err != nil {
-				return fmt.Errorf("command exited with error: %w", err)
+				return fmt.Errorf("%s: %w", i18n.T("command exited with error"), err)
 			}
 			return nil
 		},
@@ -172,10 +174,10 @@ func renderMatches(matches []scoredSnippet) {
 			fmt.Printf("    %s\n", sn.Description)
 		}
 		if len(sn.Tags) > 0 {
-			fmt.Printf("    %s\n", dim("tags: "+strings.Join(sn.Tags, ", ")))
+			fmt.Printf("    %s\n", dim(i18n.T("tags: ")+strings.Join(sn.Tags, ", ")))
 		}
 		if sn.Example != "" {
-			fmt.Printf("    %s %s\n", dim("example:"), sn.Example)
+			fmt.Printf("    %s %s\n", dim(i18n.T("example:")), sn.Example)
 		}
 		fmt.Println()
 	}
