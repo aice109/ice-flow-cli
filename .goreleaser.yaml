@@ -45,11 +45,11 @@ changelog:
   sort: asc
   filters:
     exclude:
-      - "^docs:"
-      - "^test:"
-      - "^chore:"
-      - "^ci:"
-      - "(?i)typo"
+      # Conventional-commit types that are not user-facing, with or without a
+      # scope: "chore:", "chore(deps):", "docs(usage):", ... The previous
+      # "^chore:" style patterns never matched scoped subjects.
+      - '^(chore|docs|test|ci)(\([^)]*\))?:'
+      - '(?i)typo'
 
 release:
   draft: false
