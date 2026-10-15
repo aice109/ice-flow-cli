@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-16
+
 ### Added
 
 - **Simplified Chinese interface.** Switch with `--lang zh-CN`, the
@@ -86,5 +88,6 @@ personal command dictionary in a single local-first binary for macOS and Linux.
 - Bundle identifier `com.aice109.iceflow` is used for the launchd label and
   systemd unit.
 
-[Unreleased]: https://github.com/aice109/ice-flow-cli/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/aice109/ice-flow-cli/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/aice109/ice-flow-cli/releases/tag/v0.2.0
 [0.1.0]: https://github.com/aice109/ice-flow-cli/releases/tag/v0.1.0
