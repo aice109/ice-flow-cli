@@ -1,0 +1,60 @@
+# goreleaser configuration — https://goreleaser.com
+#
+# Produces iflow_<version>_<os>_<arch>.tar.gz for macOS and Linux (amd64/arm64)
+# plus checksums.txt. The self-updater consumes exactly these names.
+version: 2
+
+project_name: iflow
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: iflow
+    main: ./cmd/iflow
+    binary: iflow
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/aice109/ice-flow-cli/internal/buildinfo.Version={{ .Version }}
+      - -X github.com/aice109/ice-flow-cli/internal/buildinfo.Commit={{ .Commit }}
+      - -X github.com/aice109/ice-flow-cli/internal/buildinfo.Date={{ .CommitDate }}
+
+archives:
+  - id: iflow
+    formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+      - CHANGELOG.md
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  use: github
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "^ci:"
+      - "(?i)typo"
+
+release:
+  draft: false
+  prerelease: auto
+  header: |
+    ## iflow {{ .Version }}
+  footer: |
+    **Full changelog**: https://github.com/aice109/ice-flow-cli/compare/{{ .PreviousTag }}...{{ .Tag }}

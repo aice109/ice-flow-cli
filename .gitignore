@@ -1,0 +1,16 @@
+# Binaries and build output
+/bin/
+/dist/
+/iflow
+
+# Local runtime state
+*.db
+*.db-wal
+*.db-shm
+.iflow/
+
+# Editor and OS noise
+.DS_Store
+.idea/
+.vscode/
+*.swp
