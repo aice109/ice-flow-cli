@@ -62,7 +62,11 @@ internal/buildinfo   identity + build-time variables
 - Keep the standard library first; add dependencies only when they clearly earn
   their place. Prefer pure-Go dependencies (no cgo) so cross-compilation stays
   trivial.
-- Format with `gofmt`.
+- Format with `gofmt`. CI checks formatting with the Go version declared in
+  `go.mod`. A newer local toolchain can disagree about alignment in
+  map/composite literals, which shows up as a formatting failure on CI only;
+  when that happens, reformat with `GOTOOLCHAIN=go$(awk '/^go /{print $2}'
+  go.mod) gofmt` or split the alignment run.
 - Write table-driven tests for parsing and ranking logic.
 - Update `CHANGELOG.md` under `## [Unreleased]` for user-visible changes.
 - Update the relevant file in `docs/` when behavior or commands change.

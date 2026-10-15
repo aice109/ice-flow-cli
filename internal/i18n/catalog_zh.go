@@ -18,6 +18,8 @@ var zhCN = map[string]string{
 
 	// --- help / completion (cobra built-ins) --------------------------------
 	"Help about any command": "查看任意命令的帮助",
+
+	// completion scripts
 	"Generate the autocompletion script for the specified shell": "为指定的 shell 生成自动补全脚本",
 	"Generate the autocompletion script for bash":                "为 bash 生成自动补全脚本",
 	"Generate the autocompletion script for zsh":                 "为 zsh 生成自动补全脚本",
