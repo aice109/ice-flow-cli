@@ -86,7 +86,7 @@ func (a *App) snippetListCmd() *cobra.Command {
 				return err
 			}
 			if a.flagJSON {
-				return printJSON(snippets)
+				return printJSON(snippetsJSON(snippets))
 			}
 			if len(snippets) == 0 {
 				fmt.Println(dim("No commands yet. Add one with `iflow cmd add`."))

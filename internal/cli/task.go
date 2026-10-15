@@ -156,7 +156,7 @@ func (a *App) taskTreeCmd() *cobra.Command {
 				return err
 			}
 			if a.flagJSON {
-				return printJSON(tasks)
+				return printJSON(tasksJSON(tasks))
 			}
 			renderTree(tasks)
 			return nil
@@ -334,7 +334,11 @@ func (a *App) runToday(cmd *cobra.Command) error {
 		}
 	}
 	if a.flagJSON {
-		return printJSON(map[string][]store.Task{"overdue": overdue, "today": today, "doing": doing})
+		return printJSON(map[string][]taskJSON{
+			"overdue": tasksJSON(overdue),
+			"today":   tasksJSON(today),
+			"doing":   tasksJSON(doing),
+		})
 	}
 	if len(overdue) == 0 && len(today) == 0 && len(doing) == 0 {
 		fmt.Println(dim("Nothing on the agenda. Enjoy the quiet."))
@@ -357,7 +361,7 @@ func (a *App) runToday(cmd *cobra.Command) error {
 
 func (a *App) outputTasks(tasks []store.Task) error {
 	if a.flagJSON {
-		return printJSON(tasks)
+		return printJSON(tasksJSON(tasks))
 	}
 	if len(tasks) == 0 {
 		fmt.Println(dim("No tasks."))

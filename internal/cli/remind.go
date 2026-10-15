@@ -71,10 +71,10 @@ func (a *App) remindAddCmd() *cobra.Command {
 					}
 					anchor = now.Add(d)
 				}
-				r.NextAt = anchor
-				if !r.NextAt.After(now) {
-					r.NextAt = recur.Next(now, anchor, rrule)
-				}
+				// Ask the recurrence for the first occurrence at or after now.
+				// Parsing a bare clock ("08:00") can roll the anchor onto a day
+				// the rule does not allow, so let the rule decide.
+				r.NextAt = nextReminderTime(now.Add(-time.Nanosecond), anchor, rrule)
 			case in != "":
 				d, err := timeparse.ParseDuration(in)
 				if err != nil {
@@ -126,7 +126,7 @@ func (a *App) remindListCmd() *cobra.Command {
 				return err
 			}
 			if a.flagJSON {
-				return printJSON(rs)
+				return printJSON(remindersJSON(rs))
 			}
 			if len(rs) == 0 {
 				fmt.Println(dim("No reminders."))
@@ -303,7 +303,7 @@ func (a *App) tick(st *store.Store) (int, error) {
 		}
 		fmt.Printf("[%s] 🔔 #%d %s\n", fmtLocal(now, "15:04:05"), r.ID, r.Title)
 		if r.RRule != "" {
-			if next := recur.Next(now, r.NextAt, r.RRule); !next.IsZero() {
+			if next := nextReminderTime(now, r.NextAt, r.RRule); !next.IsZero() {
 				if err := st.UpdateReminderNext(r.ID, next); err != nil {
 					return 0, err
 				}
@@ -323,6 +323,15 @@ func parseID(s string) (int64, error) {
 		return 0, fmt.Errorf("invalid id %q", s)
 	}
 	return id, nil
+}
+
+// nextReminderTime computes a reminder's next fire time. Remainders are stored
+// in UTC, but recurrence must follow the local wall clock: "09:30" has to stay
+// 09:30 locally across days, weeks and DST, and weekday/month boundaries are
+// local, not UTC. Normalizing the anchor to the local zone first makes the
+// recurrence math operate on the user's clock.
+func nextReminderTime(now, nextAt time.Time, rrule string) time.Time {
+	return recur.Next(now, nextAt.In(time.Local), rrule)
 }
 
 func joinArgs(args []string) string {

@@ -14,6 +14,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The renderer previously measured color escape sequences as visible width,
   which pushed columns out of line; it now measures visible width and accounts
   for East Asian wide (CJK) runes too.
+- `--json` output now renders timestamps in the local timezone with an explicit
+  offset (`2026-10-16T09:00:00+08:00`) instead of UTC (`2026-10-16T01:00:00Z`),
+  so it matches both what you entered and the table view. Tasks and reminders
+  are still stored in UTC internally.
+- Recurring reminders now advance on the local wall clock. Previously the
+  next occurrence was computed from the UTC-stored anchor, so in UTC+8 a
+  `--every monday --at 00:30` reminder fired on Tuesday.
+- The first fire of a recurring reminder now honors the rule, so
+  `--every mon,wed,fri --at 08:00` no longer lands on a weekend.
 
 ### Changed
 

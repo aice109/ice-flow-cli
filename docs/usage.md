@@ -19,6 +19,11 @@ Global flags apply to every command:
 | `--json` | Emit JSON where supported (lists, `version`) |
 | `--no-color` | Disable ANSI colors (also respects `NO_COLOR`) |
 
+`--json` renders every timestamp in your local timezone as RFC3339 with an
+explicit offset (for example `2026-10-16T09:00:00+08:00`). Tasks and reminders
+are stored in UTC internally; the local offset is applied for display and
+output only.
+
 ## Overview
 
 Running `iflow` with no arguments prints the **today** dashboard: overdue tasks,

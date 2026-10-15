@@ -39,7 +39,7 @@ func (a *App) findCmd() *cobra.Command {
 				return err
 			}
 			if a.flagJSON {
-				return printJSON(matches)
+				return printJSON(matchesJSON(matches))
 			}
 			if len(matches) == 0 {
 				fmt.Println(dim("No matching commands."))
