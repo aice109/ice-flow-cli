@@ -265,10 +265,12 @@ var zhCN = map[string]string{
 	"The current state is saved to a pre-restore archive first, and the background scheduler is restarted so it reopens the restored database.": "恢复前会先将当前状态保存为 pre-restore 归档，并重启后台调度器使其重新打开恢复后的数据库。",
 	"%s does not look like an iceflow backup":                                                                                                   "%s 不像是 iceflow 的备份",
 	"Restore will overwrite the current configuration and database. Continue?":                                                                  "恢复会覆盖当前配置和数据库。是否继续？",
-	"current state saved to %s":                                                                                                                 "当前状态已保存到 %s",
-	"restored %s":                                                                                                                               "已恢复 %s",
-	"could not restart the background scheduler: %v":                                                                                            "无法重启后台调度器：%v",
-	"restart the background scheduler with `iceflow service install` if you use one":                                                            "如果你使用了后台调度器，请用 `iceflow service install` 重启它",
+	// restore results
+	"current state saved to %s": "当前状态已保存到 %s",
+	"restored %s":               "已恢复 %s",
+	// scheduler restart
+	"could not restart the background scheduler: %v":                                 "无法重启后台调度器：%v",
+	"restart the background scheduler with `iceflow service install` if you use one": "如果你使用了后台调度器，请用 `iceflow service install` 重启它",
 
 	// --- update -------------------------------------------------------------
 	"Update iceflow to the latest release": "将 iceflow 更新到最新版本",
