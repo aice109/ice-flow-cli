@@ -1,5 +1,5 @@
 // Package service installs and manages a periodic background job that runs
-// `iflow remind daemon --tick`, so reminders fire even when the CLI is not
+// `iceflow remind daemon --tick`, so reminders fire even when the CLI is not
 // running.
 //
 // On macOS it writes a launchd agent; on Linux it prefers a systemd --user
@@ -20,3 +20,11 @@ func Uninstall() (string, error) { return uninstall() }
 
 // Status reports whether the periodic job is installed and running.
 func Status() (string, error) { return status() }
+
+// Installed reports whether the background job is registered, without
+// interpreting the human-readable status string.
+func Installed() bool { return installed() }
+
+// Restart reloads the installed background job so it picks up a replaced
+// binary or database. It is a no-op when nothing is installed.
+func Restart() (string, error) { return restart() }

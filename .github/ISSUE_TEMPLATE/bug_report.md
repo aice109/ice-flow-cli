@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Report a problem with iflow
+about: Report a problem with iceflow
 title: ""
 labels: bug
 assignees: ""
@@ -12,7 +12,7 @@ A clear and concise description of the bug.
 
 ### Steps to reproduce
 
-1. Run `iflow ...`
+1. Run `iceflow ...`
 2. ...
 
 ### Expected behavior
@@ -21,7 +21,7 @@ What you expected to happen.
 
 ### Environment
 
-- `iflow version` output:
+- `iceflow version` output:
   ```
   paste here
   ```

@@ -1,15 +1,16 @@
 # Usage reference
 
-`iflow` is organized into a handful of command groups. Run `iflow <group>
+`iceflow` is organized into a handful of command groups. Run `iceflow <group>
 --help` for the authoritative flag list at any time.
 
-- [`iflow` (no args)](#overview)
-- [`iflow task`](#task)
-- [`iflow remind`](#remind)
-- [`iflow cmd`, `find`, `run`](#command-dictionary)
-- [`iflow service`](#service)
-- [`iflow update`](#update)
-- [`iflow config` and `iflow init`](#config)
+- [`iceflow` (no args)](#overview)
+- [`iceflow task`](#task)
+- [`iceflow remind`](#remind)
+- [`iceflow cmd`, `find`, `run`](#command-dictionary)
+- [`iceflow service`](#service)
+- [`iceflow backup` and `iceflow restore`](#backup)
+- [`iceflow update`](#update)
+- [`iceflow config` and `iceflow init`](#config)
 - [Language](#language)
 
 Global flags apply to every command:
@@ -28,13 +29,31 @@ output only.
 
 `--help` describes one level at a time, the way `git` and `kubectl` do: the
 top-level list is grouped (`Planning`, `Dictionary`, `Maintenance`, `Help`) and
-`iflow task --help` drills into that group. `iflow help task add` reaches a
+`iceflow task --help` drills into that group. `iceflow help task add` reaches a
 command by path.
 
 ## Overview
 
-Running `iflow` with no arguments prints the **today** dashboard: overdue tasks,
-tasks due today, and everything currently in progress.
+Running `iceflow` with no arguments prints a day-by-day dashboard that merges
+open tasks and enabled reminders:
+
+```sh
+iceflow            # today (overdue items are always included)
+iceflow -n 3       # today plus the next 2 days
+iceflow --days 7
+iceflow --days 30
+```
+
+`-n`/`--days` is the window length in days, counting today, so `1` (the
+default) is today alone. Overdue items come first, then one section per day
+that has something due, then any in-progress task that is not already listed.
+Each row carries the item's id, so `#3` can be passed straight to
+`iceflow task ...` or `iceflow remind ...`. An all-day task is shown as
+`all day`; reminders show their time and recurrence.
+
+`iceflow --json` returns `RangeDays`, an `Overdue` group, a `Schedule` array of
+`{Date, Tasks, Reminders}` objects (each reusing the task/reminder JSON shapes)
+and an `InProgress` array of tasks.
 
 ### Reading the output
 
@@ -54,6 +73,7 @@ The `Due` column pairs the absolute local time with a relative hint:
 
 - `2026-10-15 23:00 (in 13 hrs)` — due tonight, 13 hours from now.
 - `2026-10-15 09:58 (12 hrs overdue)` — the due time passed 12 hours ago.
+- `2026-10-20 (all day)` — a date without a time is an all-day task.
 
 Overdue times render in red and anything due within the next 24 hours in
 yellow. Durations always carry an explicit unit (`min` / `hr` / `day`) so a
@@ -65,7 +85,7 @@ Tasks carry a title, optional notes, a status (`todo`/`doing`/`done`), a
 priority (`p0` highest … `p3` lowest), a project, tags, an optional due time and
 an optional parent task.
 
-### `iflow task add <title>`
+### `iceflow task add <title>`
 
 | Flag | Meaning |
 | --- | --- |
@@ -76,11 +96,16 @@ an optional parent task.
 | `--parent <id>` | Nest under another task |
 | `--notes <text>` | Free-form notes |
 
+A `--due` value that names only a date (`2026-10-20`, `today`, `tomorrow`,
+`monday`) is stored as an **all-day** task: it is due for the whole day and is
+not marked overdue until the following day. Add a clock (`tomorrow 9am`,
+`09:30`, `in 3h`) for a specific time.
+
 ```sh
-iflow task add "Write weekly report" --due "tomorrow 9am" --prio high --tag work
+iceflow task add "Write weekly report" --due "tomorrow 9am" --prio high --tag work
 ```
 
-### `iflow task list` (alias `ls`)
+### `iceflow task list` (alias `ls`)
 
 Open tasks by default. Flags: `--status`, `--tag`, `--project`, `--all`
 (include done).
@@ -89,20 +114,20 @@ Open tasks by default. Flags: `--status`, `--tag`, `--project`, `--all`
 
 | Command | Effect |
 | --- | --- |
-| `iflow task start <id>` | Mark in progress |
-| `iflow task done <id>` | Mark done (stamps completion time) |
-| `iflow task reopen <id>` | Back to todo |
-| `iflow task edit <id>` | Change fields (`--title`, `--notes`, `--due`, `--clear-due`, `--prio`, `--project`, `--status`, `--tag`, `--add-tag`, `--rm-tag`) |
-| `iflow task rm <id>` | Delete (cascades to subtasks; `--yes` skips the prompt) |
-| `iflow task tree` | Hierarchy view |
-| `iflow task today` | Same as running `iflow` |
+| `iceflow task start <id>` | Mark in progress |
+| `iceflow task done <id>` | Mark done (stamps completion time) |
+| `iceflow task reopen <id>` | Back to todo |
+| `iceflow task edit <id>` | Change fields (`--title`, `--notes`, `--due`, `--clear-due`, `--prio`, `--project`, `--status`, `--tag`, `--add-tag`, `--rm-tag`) |
+| `iceflow task rm <id>` | Delete (cascades to subtasks; `--yes` skips the prompt) |
+| `iceflow task tree` | Hierarchy view |
+| `iceflow task today` | Same as running `iceflow` |
 
 ## Remind
 
 A reminder has a title, optional notes, a next fire time and an optional
 recurrence rule.
 
-### `iflow remind add <title>`
+### `iceflow remind add <title>`
 
 Provide exactly one timing source:
 
@@ -117,21 +142,21 @@ Recurrence specs: `day`/`daily`, `weekday`/`weekdays`, `week`/`weekly`,
 weekday list like `mon,wed,fri`. Combine with `--at` to set the time of day.
 
 ```sh
-iflow remind add "Standup"      --every weekday --at 09:30
-iflow remind add "Water plants" --every 2d
-iflow remind add "Call mom"     --at "tomorrow 19:00"
-iflow remind add "Stretch"      --in 45m --notes "stand up and walk"
+iceflow remind add "Standup"      --every weekday --at 09:30
+iceflow remind add "Water plants" --every 2d
+iceflow remind add "Call mom"     --at "tomorrow 19:00"
+iceflow remind add "Stretch"      --in 45m --notes "stand up and walk"
 ```
 
 ### Managing reminders
 
 | Command | Effect |
 | --- | --- |
-| `iflow remind list` | Upcoming reminders (`--all` includes disabled) |
-| `iflow remind rm <id>` | Delete |
-| `iflow remind snooze <id> <dur>` | Push forward and re-enable |
-| `iflow remind enable\|disable <id>` | Toggle |
-| `iflow remind daemon [--tick]` | Scheduler: loop, or a single pass for cron/launchd |
+| `iceflow remind list` | Upcoming reminders (`--all` includes disabled) |
+| `iceflow remind rm <id>` | Delete |
+| `iceflow remind snooze <id> <dur>` | Push forward and re-enable |
+| `iceflow remind enable\|disable <id>` | Toggle |
+| `iceflow remind daemon [--tick]` | Resident scheduler, or a single pass for cron |
 
 One-shot reminders disable themselves after firing; recurring ones advance to
 the next occurrence automatically.
@@ -140,7 +165,7 @@ the next occurrence automatically.
 
 Store a command with an explanation so you can find it later.
 
-### `iflow cmd add <command>`
+### `iceflow cmd add <command>`
 
 | Flag | Meaning |
 | --- | --- |
@@ -150,14 +175,14 @@ Store a command with an explanation so you can find it later.
 | `--shell` | Target shell |
 
 ```sh
-iflow cmd add "flutter doctor" -d "Check the Flutter environment" -t flutter,env --example "flutter doctor -v"
+iceflow cmd add "flutter doctor" -d "Check the Flutter environment" -t flutter,env --example "flutter doctor -v"
 ```
 
 ### Searching and running
 
 ```sh
-iflow find doctor   # fuzzy search; -n limits results, --json for machines
-iflow run doctor    # execute the top match via sh -c (--yes skips confirmation)
+iceflow find doctor   # fuzzy search; -n limits results, --json for machines
+iceflow run doctor    # execute the top match via sh -c (--yes skips confirmation)
 ```
 
 Search matches the command, tags and description. Exact matches win, then
@@ -166,9 +191,9 @@ boundary matches, then looser subsequences; frequently used entries get a boost.
 ### Import and export
 
 ```sh
-iflow cmd import my-commands.json
-iflow cmd export --format md  > commands.md
-iflow cmd export --format json
+iceflow cmd import my-commands.json
+iceflow cmd export --format md  > commands.md
+iceflow cmd export --format json
 ```
 
 See the [command dictionary guide](command-dictionary.md) for formats.
@@ -176,34 +201,63 @@ See the [command dictionary guide](command-dictionary.md) for formats.
 ## Service
 
 ```sh
-iflow service install     # macOS: launchd agent; Linux: systemd --user timer (or cron)
-iflow service status
-iflow service uninstall
+iceflow service install     # macOS: launchd agent; Linux: systemd --user service (or cron)
+iceflow service status
+iceflow service uninstall
 ```
 
-The job runs `iflow remind daemon --tick` every minute. Use an absolute binary
-path (the installer records `os.Executable()`), and re-run `install` after
-moving the binary.
+The service keeps a resident `iceflow remind daemon` running, so reminders fire on
+scheduler wakes exactly when they are due instead of on a polling interval. The
+crontab fallback runs `iceflow remind daemon --tick` once a minute and is therefore
+accurate only to the minute. Use an absolute binary path (the installer records
+`os.Executable()`), and re-run `install` after moving or upgrading the binary so
+the resident process picks up the new executable.
+
+## Backup and restore
+
+Your data is two local files: `config.toml` (under the XDG config dir) and
+`iceflow.db` (under the XDG data dir; see `iceflow config path`).
+
+```sh
+iceflow backup                            # -> ./iceflow-backup-<timestamp>.tar.gz
+iceflow backup /path/to/iceflow-backup.tar.gz
+iceflow backup -o /Volumes/usb/iceflow.tar.gz
+
+iceflow restore /path/to/iceflow-backup.tar.gz
+iceflow restore backup.tar.gz --yes       # skip the confirmation prompt
+```
+
+The archive holds `config.toml`, `iceflow.db` and a `manifest.json` recording the
+version and creation time. The database is captured with SQLite's `VACUUM INTO`,
+so the snapshot is consistent even while the resident scheduler is running.
+
+Restoring replaces whichever of the two files is present in the archive. It
+first saves the current state to `iceflow-pre-restore-<timestamp>.tar.gz`, then
+restarts the background scheduler (if installed) so the daemon reopens the
+restored database. Use `--yes` in scripts; otherwise you are asked to confirm.
+
+`--db <path>` and `ICEFLOW_HOME` change where the database/config live, and the
+backup and restore commands follow the same resolution.
 
 ## Update
 
 ```sh
-iflow update --check   # report whether a newer release exists
-iflow update           # download, verify checksum, replace in place
-iflow update --force   # reinstall the current version
+iceflow update --check   # report whether a newer release exists
+iceflow update           # download, verify checksum, replace in place
+iceflow update --force   # reinstall the current version
 ```
 
-The binary must be writable by your user. If `iflow` was installed by a package
+The binary must be writable by your user. If `iceflow` was installed by a package
 manager, update through that instead.
 
 ## Config
 
 ```sh
-iflow init                     # create config + database
-iflow config                   # show paths and current settings
-iflow config path              # print config and database paths
-iflow config get notify
-iflow config set notify stdout
+iceflow init                     # create config + database
+iceflow config                   # show paths and current settings
+iceflow config path              # print config and database paths
+iceflow config get notify
+iceflow config set notify stdout
 ```
 
 Keys: `auto_update_check`, `date_format`, `default_priority`, `github_repo`,
@@ -214,9 +268,9 @@ Keys: `auto_update_check`, `date_format`, `default_priority`, `github_repo`,
 Output defaults to English, but the interface can be switched to Simplified
 Chinese. Resolution order, first match wins:
 
-1. `--lang <tag>` on the command line (`iflow --lang zh-CN task list`).
-2. the `IFLOW_LANG` environment variable.
-3. the `lang` config key (`iflow config set lang zh-CN`).
+1. `--lang <tag>` on the command line (`iceflow --lang zh-CN task list`).
+2. the `ICEFLOW_LANG` environment variable.
+3. the `lang` config key (`iceflow config set lang zh-CN`).
 4. the POSIX locale environment (`LC_ALL`, `LC_MESSAGES`, then `LANG`).
 5. English.
 

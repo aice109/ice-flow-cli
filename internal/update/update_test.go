@@ -23,15 +23,15 @@ func TestCompareSemver(t *testing.T) {
 
 func TestAssetName(t *testing.T) {
 	got := AssetName("v1.2.3", "darwin", "arm64")
-	want := "iflow_1.2.3_darwin_arm64.tar.gz"
+	want := "iceflow_1.2.3_darwin_arm64.tar.gz"
 	if got != want {
 		t.Errorf("got %q want %q", got, want)
 	}
 }
 
 func TestChecksumFor(t *testing.T) {
-	sums := "abc123  iflow_1.2.3_darwin_arm64.tar.gz\ndef456  iflow_1.2.3_linux_amd64.tar.gz\n"
-	got, err := checksumFor(sums, "iflow_1.2.3_linux_amd64.tar.gz")
+	sums := "abc123  iceflow_1.2.3_darwin_arm64.tar.gz\ndef456  iceflow_1.2.3_linux_amd64.tar.gz\n"
+	got, err := checksumFor(sums, "iceflow_1.2.3_linux_amd64.tar.gz")
 	if err != nil {
 		t.Fatal(err)
 	}

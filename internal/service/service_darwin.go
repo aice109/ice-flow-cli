@@ -33,12 +33,13 @@ func plistBody(exe string) string {
     <string>%s</string>
     <string>remind</string>
     <string>daemon</string>
-    <string>--tick</string>
   </array>
-  <key>StartInterval</key>
-  <integer>60</integer>
   <key>RunAtLoad</key>
-  <false/>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
   <key>StandardOutPath</key>
   <string>%s</string>
   <key>StandardErrorPath</key>
@@ -67,7 +68,7 @@ func install(exe string) (string, error) {
 		}
 	}
 	_ = exec.Command("launchctl", "enable", serviceTarget()).Run()
-	return i18n.Tf("installed launchd agent %s\n  plist:  %s\n  action: %s remind daemon --tick (every 60s)", Label(), p, exe), nil
+	return i18n.Tf("installed launchd agent %s\n  plist:  %s\n  action: %s remind daemon (resident scheduler)", Label(), p, exe), nil
 }
 
 func uninstall() (string, error) {
@@ -89,4 +90,22 @@ func status() (string, error) {
 		return i18n.Tf("installed but not loaded\n  plist: %s", p), nil
 	}
 	return i18n.Tf("installed and loaded\n  plist: %s", p), nil
+}
+
+func installed() bool {
+	_, err := os.Stat(plistPath())
+	return err == nil
+}
+
+func restart() (string, error) {
+	if !installed() {
+		return "", nil
+	}
+	p := plistPath()
+	_ = exec.Command("launchctl", "bootout", serviceTarget()).Run()
+	if out, err := exec.Command("launchctl", "bootstrap", domainTarget(), p).CombinedOutput(); err != nil {
+		return "", fmt.Errorf("launchctl bootstrap: %v (%s)", err, out)
+	}
+	_ = exec.Command("launchctl", "enable", serviceTarget()).Run()
+	return i18n.Tf("restarted launchd agent %s", Label()), nil
 }

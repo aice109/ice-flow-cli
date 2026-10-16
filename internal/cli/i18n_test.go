@@ -80,7 +80,7 @@ func TestLocalizeError(t *testing.T) {
 	setLocale(t, i18n.ChineseSimplified)
 
 	cases := map[string]string{
-		`unknown command "tsk" for "iflow"`:           `未知命令 "tsk"（属于 "iflow"）`,
+		`unknown command "tsk" for "iceflow"`:         `未知命令 "tsk"（属于 "iceflow"）`,
 		"unknown flag: --bogus":                       "未知标志: --bogus",
 		"unknown shorthand flag: 'x' in -x":           "未知短标志: 'x' in -x",
 		"accepts 1 arg(s), received 2":                "需要 1 个参数，收到 2 个",
@@ -97,12 +97,12 @@ func TestLocalizeError(t *testing.T) {
 func TestLocalizeErrorKeepsSuggestions(t *testing.T) {
 	setLocale(t, i18n.ChineseSimplified)
 
-	in := "unknown command \"tsk\" for \"iflow\"\n\nDid you mean this?\n\ttask\n"
+	in := "unknown command \"tsk\" for \"iceflow\"\n\nDid you mean this?\n\ttask\n"
 	got := localizeError(errors.New(in))
 	if !strings.Contains(got, "Did you mean this?") {
 		t.Errorf("lost suggestions: %q", got)
 	}
-	if !strings.HasPrefix(got, `未知命令 "tsk"（属于 "iflow"）`) {
+	if !strings.HasPrefix(got, `未知命令 "tsk"（属于 "iceflow"）`) {
 		t.Errorf("prefix not localized: %q", got)
 	}
 }

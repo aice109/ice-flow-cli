@@ -27,9 +27,9 @@ func (a *App) findCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "find <query>",
 		Short: "Fuzzy-search your command dictionary",
-		Example: `  iflow find doctor
-  iflow find reset
-  iflow find -n 5 list`,
+		Example: `  iceflow find doctor
+  iceflow find reset
+  iceflow find -n 5 list`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			st, err := a.openStore()

@@ -54,6 +54,8 @@ CREATE INDEX idx_tasks_parent ON tasks(parent_id);
 CREATE INDEX idx_reminders_next ON reminders(enabled, next_at);
 CREATE INDEX idx_snippets_command ON snippets(command);
 `,
+	// v2: distinguish all-day due dates from specific times.
+	`ALTER TABLE tasks ADD COLUMN all_day INTEGER NOT NULL DEFAULT 0;`,
 }
 
 func migrate(db *sql.DB) error {

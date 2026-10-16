@@ -43,18 +43,18 @@ type Release struct {
 type Client struct {
 	Repo    string // "owner/repo"
 	BaseURL string // API base, defaults to https://api.github.com
-	Token   string // optional; printed by env GITHUB_TOKEN / IFLOW_GITHUB_TOKEN
+	Token   string // optional; printed by env GITHUB_TOKEN / ICEFLOW_GITHUB_TOKEN
 	HTTP    *http.Client
 }
 
-// NewClient builds a Client for repo, honoring IFLOW_UPDATE_API_URL and
+// NewClient builds a Client for repo, honoring ICEFLOW_UPDATE_API_URL and
 // GITHUB_TOKEN.
 func NewClient(repo string) *Client {
-	base := os.Getenv("IFLOW_UPDATE_API_URL")
+	base := os.Getenv("ICEFLOW_UPDATE_API_URL")
 	if base == "" {
 		base = "https://api.github.com"
 	}
-	token := os.Getenv("IFLOW_GITHUB_TOKEN")
+	token := os.Getenv("ICEFLOW_GITHUB_TOKEN")
 	if token == "" {
 		token = os.Getenv("GITHUB_TOKEN")
 	}
@@ -99,7 +99,7 @@ func (c *Client) Latest() (*Release, error) {
 // matching the goreleaser configuration.
 func AssetName(version, goos, goarch string) string {
 	v := strings.TrimPrefix(version, "v")
-	return fmt.Sprintf("iflow_%s_%s_%s.tar.gz", v, goos, goarch)
+	return fmt.Sprintf("iceflow_%s_%s_%s.tar.gz", v, goos, goarch)
 }
 
 // Find returns the asset with the given name.
@@ -200,7 +200,7 @@ func (c *Client) Apply(rel *Release) (string, error) {
 		}
 	}
 
-	bin, err := extractBinary(archive, "iflow")
+	bin, err := extractBinary(archive, "iceflow")
 	if err != nil {
 		return "", err
 	}

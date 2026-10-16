@@ -22,6 +22,7 @@ type Task struct {
 	Project     string
 	ParentID    *int64
 	DueAt       *time.Time
+	AllDay      bool // due_at names a date, not a time of day
 	Tags        []string
 	CreatedAt   time.Time
 	UpdatedAt   time.Time

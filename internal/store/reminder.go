@@ -74,6 +74,25 @@ func (s *Store) DueReminders(now time.Time) ([]Reminder, error) {
 	return out, rows.Err()
 }
 
+// NextDueAt returns the earliest next_at among enabled reminders, including
+// ones that are already overdue. The bool is false when no enabled reminder
+// exists. next_at is stored as a UTC RFC3339 string, so MIN() is a valid
+// chronological ordering.
+func (s *Store) NextDueAt() (time.Time, bool, error) {
+	var ns sql.NullString
+	if err := s.db.QueryRow(`SELECT MIN(next_at) FROM reminders WHERE enabled = 1`).Scan(&ns); err != nil {
+		return time.Time{}, false, err
+	}
+	if !ns.Valid || ns.String == "" {
+		return time.Time{}, false, nil
+	}
+	t, err := time.Parse(time.RFC3339, ns.String)
+	if err != nil {
+		return time.Time{}, false, err
+	}
+	return t, true, nil
+}
+
 // UpdateReminderNext advances a reminder's schedule after firing.
 func (s *Store) UpdateReminderNext(id int64, next time.Time) error {
 	_, err := s.db.Exec(`UPDATE reminders SET next_at=?, last_fired_at=? WHERE id=?`,

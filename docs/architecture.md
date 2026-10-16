@@ -1,6 +1,6 @@
 # Architecture
 
-`iflow` is a single Go binary. It stores everything in one SQLite database and
+`iceflow` is a single Go binary. It stores everything in one SQLite database and
 ships with a small amount of OS integration for reminders and updates.
 
 ## Goals
@@ -14,7 +14,7 @@ ships with a small amount of OS integration for reminders and updates.
 ## Packages
 
 ```
-cmd/iflow            entry point
+cmd/iceflow            entry point
 internal/cli         cobra command tree, rendering
 internal/store       SQLite persistence and migrations
 internal/fuzzy       weighted subsequence matcher
@@ -51,10 +51,10 @@ Everything is XDG-based on both macOS and Linux:
 
 | Purpose | Default | Override |
 | --- | --- | --- |
-| Config | `~/.config/iflow/config.toml` | `XDG_CONFIG_HOME`, `IFLOW_HOME` |
-| Data | `~/.local/share/iflow/iflow.db` | `XDG_DATA_HOME`, `IFLOW_HOME` |
+| Config | `~/.config/iceflow/config.toml` | `XDG_CONFIG_HOME`, `ICEFLOW_HOME` |
+| Data | `~/.local/share/iceflow/iceflow.db` | `XDG_DATA_HOME`, `ICEFLOW_HOME` |
 
-`IFLOW_HOME` redirects both, which is how the test suite and `make run` stay
+`ICEFLOW_HOME` redirects both, which is how the test suite and `make run` stay
 isolated.
 
 ## Fuzzy matching
@@ -77,13 +77,16 @@ computes the next fire time, using the stored `next_at` as the anchor so the
 time of day is preserved across days, weeks and months (with month-length
 clamping, e.g. Jan 31 → Feb 28).
 
-Firing is decoupled from any long-running process:
+Firing is decoupled from the CLI:
 
-- `iflow remind daemon --tick` performs a single pass — fire everything due,
-  then advance or disable it.
-- `iflow service install` schedules that pass once a minute via launchd
-  (macOS), a systemd `--user` timer (Linux), or crontab as a fallback.
-- `iflow remind daemon` also runs a foreground loop for people who prefer it.
+- `iceflow remind daemon` is a resident scheduler. It wakes when the next
+  reminder is due (at most one second away, so reminders added while it sleeps
+  are noticed promptly), fires everything due, then advances or disables it.
+- `iceflow remind daemon --tick` performs a single pass and exits, for
+  cron-style schedulers.
+- `iceflow service install` installs that resident scheduler as a launchd agent
+  (macOS) or a systemd `--user` service (Linux). When systemd is unavailable it
+  falls back to a crontab entry running `--tick` once a minute.
 
 Notifications go through `internal/notify`, which picks `osascript`,
 `notify-send`, or stdout based on `notify` config and what is installed.
@@ -91,14 +94,14 @@ Notifications go through `internal/notify`, which picks `osascript`,
 ## Self-update
 
 `internal/update` queries the GitHub Releases API, compares semantic versions,
-selects `iflow_<version>_<os>_<arch>.tar.gz`, downloads the archive and
+selects `iceflow_<version>_<os>_<arch>.tar.gz`, downloads the archive and
 `checksums.txt`, verifies SHA-256, extracts the binary, and replaces itself by
 renaming the old file aside and moving the new one into place. Version metadata
 is injected at build time via `-ldflags` into `internal/buildinfo`.
 
-Downloads and checks are read-only; `iflow update` is the only command that
-writes to the binary. Set `IFLOW_UPDATE_API_URL` to point at a mirror, or
-`IFLOW_GITHUB_TOKEN` to raise API limits.
+Downloads and checks are read-only; `iceflow update` is the only command that
+writes to the binary. Set `ICEFLOW_UPDATE_API_URL` to point at a mirror, or
+`ICEFLOW_GITHUB_TOKEN` to raise API limits.
 
 ## Localization
 
@@ -109,8 +112,8 @@ localized: `cli.localizeTree` rewrites command descriptions and flag usage by
 lookup, and a custom usage template renders translated section labels.
 
 The locale is resolved in `cli.Execute` **before** the command tree is built, so
-`iflow --help` is translated too. Unlike flags parsed by cobra, `--lang` is
-pre-scanned from `os.Args`. Precedence is `--lang` → `IFLOW_LANG` → `lang`
+`iceflow --help` is translated too. Unlike flags parsed by cobra, `--lang` is
+pre-scanned from `os.Args`. Precedence is `--lang` → `ICEFLOW_LANG` → `lang`
 config key → `LC_ALL`/`LC_MESSAGES`/`LANG` → English.
 
 Command names, flag names, `--json` keys, RRULE strings and stored data are

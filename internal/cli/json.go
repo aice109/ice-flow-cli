@@ -39,6 +39,7 @@ type taskJSON struct {
 	Project     string
 	ParentID    *int64
 	DueAt       *string
+	AllDay      bool
 	Tags        []string
 	CreatedAt   string
 	UpdatedAt   string
@@ -55,6 +56,7 @@ func newTaskJSON(t store.Task) taskJSON {
 		Project:     t.Project,
 		ParentID:    t.ParentID,
 		DueAt:       jsonTimePtr(t.DueAt),
+		AllDay:      t.AllDay,
 		Tags:        t.Tags,
 		CreatedAt:   jsonTimeValue(t.CreatedAt),
 		UpdatedAt:   jsonTimeValue(t.UpdatedAt),

@@ -16,6 +16,31 @@ func newTestStore(t *testing.T) *Store {
 	return s
 }
 
+func TestBackupSnapshot(t *testing.T) {
+	s := newTestStore(t)
+	if _, err := s.CreateTask(&Task{Title: "keep"}); err != nil {
+		t.Fatal(err)
+	}
+
+	dest := filepath.Join(t.TempDir(), "snapshot.db")
+	if err := s.Backup(dest); err != nil {
+		t.Fatalf("backup: %v", err)
+	}
+
+	snap, err := Open(dest)
+	if err != nil {
+		t.Fatalf("open snapshot: %v", err)
+	}
+	defer snap.Close()
+	tasks, err := snap.ListTasks(TaskFilter{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(tasks) != 1 || tasks[0].Title != "keep" {
+		t.Errorf("snapshot tasks = %+v, want one titled keep", tasks)
+	}
+}
+
 func TestTaskLifecycle(t *testing.T) {
 	s := newTestStore(t)
 
@@ -139,6 +164,72 @@ func TestReminderScheduleAndFire(t *testing.T) {
 	got, _ := s.GetReminder(id)
 	if got.Enabled {
 		t.Error("expected reminder disabled")
+	}
+}
+
+func TestNextDueAt(t *testing.T) {
+	s := newTestStore(t)
+
+	if _, ok, err := s.NextDueAt(); err != nil || ok {
+		t.Fatalf("NextDueAt on empty store = (%v, %v), want no reminder", ok, err)
+	}
+
+	early := time.Now().Add(2 * time.Hour).Truncate(time.Second)
+	late := time.Now().Add(5 * time.Hour).Truncate(time.Second)
+	earlyID, err := s.CreateReminder(&Reminder{Title: "early", NextAt: early, Enabled: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.CreateReminder(&Reminder{Title: "late", NextAt: late, Enabled: true}); err != nil {
+		t.Fatal(err)
+	}
+
+	got, ok, err := s.NextDueAt()
+	if err != nil || !ok {
+		t.Fatalf("NextDueAt = (%v, %v), want a reminder", ok, err)
+	}
+	if !got.Equal(early) {
+		t.Errorf("NextDueAt = %s, want %s", got, early)
+	}
+
+	// Disabling the earliest reminder should surface the next one.
+	if err := s.SetReminderEnabled(earlyID, false); err != nil {
+		t.Fatal(err)
+	}
+	got, _, _ = s.NextDueAt()
+	if !got.Equal(late) {
+		t.Errorf("NextDueAt after disabling = %s, want %s", got, late)
+	}
+}
+
+func TestTaskAllDayRoundTrip(t *testing.T) {
+	s := newTestStore(t)
+	due := time.Date(2026, 10, 20, 0, 0, 0, 0, time.Local)
+	id, err := s.CreateTask(&Task{Title: "all day", DueAt: &due, AllDay: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := s.GetTask(id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !got.AllDay {
+		t.Error("AllDay did not round-trip")
+	}
+	if got.DueAt == nil || !got.DueAt.Equal(due) {
+		t.Errorf("DueAt = %v, want %v", got.DueAt, due)
+	}
+
+	// Clearing the due date must clear the flag too.
+	got.DueAt = nil
+	got.AllDay = false
+	if err := s.UpdateTask(got); err != nil {
+		t.Fatal(err)
+	}
+	got, _ = s.GetTask(id)
+	if got.DueAt != nil || got.AllDay {
+		t.Errorf("after clear: DueAt=%v AllDay=%v, want nil/false", got.DueAt, got.AllDay)
 	}
 }
 

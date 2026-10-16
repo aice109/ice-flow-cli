@@ -20,7 +20,7 @@ var (
 // Application identity constants.
 const (
 	// AppName is the user-facing binary name.
-	AppName = "iflow"
+	AppName = "iceflow"
 	// BundleID is the reverse-DNS identifier used for launchd labels and
 	// systemd unit names.
 	BundleID = "com.aice109.iceflow"

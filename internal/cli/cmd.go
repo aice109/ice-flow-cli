@@ -22,7 +22,7 @@ func (a *App) snippetCmd() *cobra.Command {
 		Aliases: []string{"cmds", "snippet"},
 		Short:   "Manage your command dictionary",
 		Long: i18n.T("Store commands together with an explanation so you can recall them later.") + "\n\n" +
-			i18n.T("Search them with `iflow find <query>` and run one with `iflow run <query>`."),
+			i18n.T("Search them with `iceflow find <query>` and run one with `iceflow run <query>`."),
 	}
 	cmd.AddCommand(
 		a.snippetAddCmd(),
@@ -41,8 +41,8 @@ func (a *App) snippetAddCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "add <command>",
 		Short: "Add a command with an explanation",
-		Example: `  iflow cmd add "flutter doctor" -d "Check the Flutter environment" -t flutter,env
-  iflow cmd add "git reset --hard HEAD~1" -d "Drop the last commit (dangerous)"`,
+		Example: `  iceflow cmd add "flutter doctor" -d "Check the Flutter environment" -t flutter,env
+  iceflow cmd add "git reset --hard HEAD~1" -d "Drop the last commit (dangerous)"`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			st, err := a.openStore()
@@ -76,8 +76,8 @@ func (a *App) snippetListCmd() *cobra.Command {
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Short:   "List stored commands",
-		Example: `  iflow cmd list
-  iflow cmd list --json`,
+		Example: `  iceflow cmd list
+  iceflow cmd list --json`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			st, err := a.openStore()
@@ -92,7 +92,7 @@ func (a *App) snippetListCmd() *cobra.Command {
 				return printJSON(snippetsJSON(snippets))
 			}
 			if len(snippets) == 0 {
-				fmt.Println(dim(i18n.T("No commands yet. Add one with `iflow cmd add`.")))
+				fmt.Println(dim(i18n.T("No commands yet. Add one with `iceflow cmd add`.")))
 				return nil
 			}
 			rows := make([][]string, 0, len(snippets))
@@ -117,7 +117,7 @@ func (a *App) snippetEditCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "edit <id>",
 		Short:   "Edit a stored command",
-		Example: `  iflow cmd edit 4 -d "updated description" -t git`,
+		Example: `  iceflow cmd edit 4 -d "updated description" -t git`,
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			id, err := parseID(args[0])
@@ -167,7 +167,7 @@ func (a *App) snippetRmCmd() *cobra.Command {
 		Use:     "rm <id>",
 		Aliases: []string{"delete", "remove"},
 		Short:   "Delete a stored command",
-		Example: "  iflow cmd rm 4",
+		Example: "  iceflow cmd rm 4",
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			id, err := parseID(args[0])
@@ -195,8 +195,8 @@ func (a *App) snippetImportCmd() *cobra.Command {
 			"JSON:  [{\"command\":\"flutter doctor\",\"description\":\"...\",\"tags\":[\"flutter\"],\"example\":\"...\"}]\n" +
 			i18n.T("Text:  one command per line, \"command :: description :: tag1,tag2\"") + "\n" +
 			i18n.T("       Markdown list items like \"- `command` - description\" also work."),
-		Example: `  iflow cmd import ~/notes.md
-  iflow cmd import commands.json`,
+		Example: `  iceflow cmd import ~/notes.md
+  iceflow cmd import commands.json`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			data, err := os.ReadFile(args[0])
@@ -229,8 +229,8 @@ func (a *App) snippetExportCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "export",
 		Short: "Export commands as JSON or Markdown",
-		Example: `  iflow cmd export --format md > commands.md
-  iflow cmd export -f json`,
+		Example: `  iceflow cmd export --format md > commands.md
+  iceflow cmd export -f json`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			st, err := a.openStore()
@@ -245,7 +245,7 @@ func (a *App) snippetExportCmd() *cobra.Command {
 			case "json":
 				return printJSON(snippetsJSON(snippets))
 			case "md", "markdown":
-				fmt.Println(i18n.T("# iflow command dictionary"))
+				fmt.Println(i18n.T("# iceflow command dictionary"))
 				fmt.Println()
 				for _, sn := range snippets {
 					fmt.Printf("- `%s`", sn.Command)

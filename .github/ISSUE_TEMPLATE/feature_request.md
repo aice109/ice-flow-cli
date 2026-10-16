@@ -1,6 +1,6 @@
 ---
 name: Feature request
-about: Suggest an idea for iflow
+about: Suggest an idea for iceflow
 title: ""
 labels: enhancement
 assignees: ""
@@ -8,7 +8,7 @@ assignees: ""
 
 ### The problem
 
-What are you trying to do that iflow does not support today?
+What are you trying to do that iceflow does not support today?
 
 ### Proposed solution
 

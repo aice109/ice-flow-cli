@@ -19,3 +19,7 @@ func uninstall() (string, error) {
 func status() (string, error) {
 	return i18n.T("unsupported on this platform"), nil
 }
+
+func installed() bool { return false }
+
+func restart() (string, error) { return "", nil }

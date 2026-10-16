@@ -1,5 +1,5 @@
 #!/bin/sh
-# install.sh — download and install the iflow CLI.
+# install.sh — download and install the iceflow CLI.
 #
 #   curl -fsSL https://raw.githubusercontent.com/aice109/ice-flow-cli/main/install.sh | sh
 #
@@ -9,7 +9,7 @@
 set -eu
 
 REPO="aice109/ice-flow-cli"
-BIN="iflow"
+BIN="iceflow"
 INSTALL_DIR="${INSTALL_DIR:-$HOME/.local/bin}"
 VERSION="${VERSION:-latest}"
 

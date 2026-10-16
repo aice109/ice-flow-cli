@@ -56,7 +56,7 @@ const usageTemplate = `{{t "Usage:"}}{{if .Runnable}}
 {{tf "Use \"%s [command] --help\" for more information about a command." .CommandPath}}{{end}}
 `
 
-// addGroups sections the top-level command list in `iflow --help`.
+// addGroups sections the top-level command list in `iceflow --help`.
 func addGroups(root *cobra.Command) {
 	root.AddGroup(
 		&cobra.Group{ID: groupPlanning, Title: i18n.T("Planning")},
@@ -74,6 +74,8 @@ func addGroups(root *cobra.Command) {
 		"update":  groupMaintenance,
 		"config":  groupMaintenance,
 		"init":    groupMaintenance,
+		"backup":  groupMaintenance,
+		"restore": groupMaintenance,
 		"version": groupMaintenance,
 	}
 	for _, c := range root.Commands() {

@@ -60,38 +60,61 @@ func ParseDuration(s string) (time.Duration, error) {
 	return total, nil
 }
 
-var layouts = []string{
-	"2006-01-02 15:04:05",
-	"2006-01-02T15:04:05",
-	"2006-01-02 15:04",
-	"2006-01-02T15:04",
-	"2006-01-02",
-	"2006/01/02 15:04",
-	"2006/01/02",
+var layouts = []struct {
+	layout string
+	allDay bool
+}{
+	{"2006-01-02 15:04:05", false},
+	{"2006-01-02T15:04:05", false},
+	{"2006-01-02 15:04", false},
+	{"2006-01-02T15:04", false},
+	{"2006-01-02", true},
+	{"2006/01/02 15:04", false},
+	{"2006/01/02", true},
 }
 
-// ParseWhen resolves an expression relative to now.
+// ParseWhen resolves an expression relative to now, returning a specific
+// instant. A bare day word ("tomorrow", "monday") keeps the historical
+// default time: now when it names today, otherwise 09:00 local. Use
+// ParseWhenAllDay when such an expression should be an all-day date instead.
 func ParseWhen(expr string, now time.Time) (time.Time, error) {
+	t, _, err := parseWhen(expr, now, false)
+	return t, err
+}
+
+// ParseWhenAllDay resolves an expression relative to now. The bool reports
+// whether the expression named a date without a time of day: "2026-10-20",
+// "tomorrow" and "monday" are all-day, while "tomorrow 9am", "09:30" and
+// "in 3h" are not. For all-day expressions the returned time is the start of
+// that day in now's location.
+func ParseWhenAllDay(expr string, now time.Time) (time.Time, bool, error) {
+	return parseWhen(expr, now, true)
+}
+
+// parseWhen implements both entry points. When dayWordAllDay is true a bare
+// day word yields the start of that day with allDay set; otherwise it yields
+// the historical default instant and allDay is left false.
+func parseWhen(expr string, now time.Time, dayWordAllDay bool) (time.Time, bool, error) {
 	orig := strings.TrimSpace(expr)
 	if orig == "" {
-		return time.Time{}, errors.New(i18n.T("empty time"))
+		return time.Time{}, false, errors.New(i18n.T("empty time"))
 	}
 	lower := strings.ToLower(orig)
 
 	// Relative: "in 30m" or a bare duration "2h".
 	if rest, ok := strings.CutPrefix(lower, "in "); ok {
 		if d, err := ParseDuration(rest); err == nil {
-			return now.Add(d), nil
+			return now.Add(d), false, nil
 		}
 	}
 	if d, err := ParseDuration(lower); err == nil {
-		return now.Add(d), nil
+		return now.Add(d), false, nil
 	}
 
 	// Absolute.
-	for _, layout := range layouts {
-		if t, err := time.ParseInLocation(layout, orig, now.Location()); err == nil {
-			return t, nil
+	for _, l := range layouts {
+		if t, err := time.ParseInLocation(l.layout, orig, now.Location()); err == nil {
+			return t, l.allDay, nil
 		}
 	}
 
@@ -124,17 +147,22 @@ func ParseWhen(expr string, now time.Time) (time.Time, error) {
 	rest := strings.Join(tokens, " ")
 	if rest == "" {
 		if !daySet {
-			return time.Time{}, errors.New(i18n.Tf("unrecognized time %q", orig))
+			return time.Time{}, false, errors.New(i18n.Tf("unrecognized time %q", orig))
+		}
+		if dayWordAllDay {
+			// A bare day word ("tomorrow", "monday") is an all-day date, not
+			// the moment the command happened to run.
+			return base, true, nil
 		}
 		if sameDay(base, now) {
-			return now, nil
+			return now, false, nil
 		}
-		return base.Add(9 * time.Hour), nil
+		return base.Add(9 * time.Hour), false, nil
 	}
 
 	h, mi, ok := parseClock(rest)
 	if !ok {
-		return time.Time{}, errors.New(i18n.Tf("unrecognized time %q", orig))
+		return time.Time{}, false, errors.New(i18n.Tf("unrecognized time %q", orig))
 	}
 	if !daySet {
 		base = startOfDay(now)
@@ -143,7 +171,7 @@ func ParseWhen(expr string, now time.Time) (time.Time, error) {
 	if (!daySet && !res.After(now)) || (rollIfPast && !res.After(now)) {
 		res = res.AddDate(0, 0, 1)
 	}
-	return res, nil
+	return res, false, nil
 }
 
 var clockRe = regexp.MustCompile(`^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$`)

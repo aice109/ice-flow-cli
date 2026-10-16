@@ -1,13 +1,15 @@
 # Binaries and build output
 /bin/
 /dist/
-/iflow
+/iceflow
 
 # Local runtime state
 *.db
 *.db-wal
 *.db-shm
-.iflow/
+.iceflow/
+iceflow-backup-*.tar.gz
+iceflow-pre-restore-*.tar.gz
 
 # Editor and OS noise
 .DS_Store

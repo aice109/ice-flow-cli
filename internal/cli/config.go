@@ -16,9 +16,9 @@ func (a *App) configCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "config",
 		Short: "Show or edit configuration",
-		Example: `  iflow config
-  iflow config get lang
-  iflow config set lang zh-CN`,
+		Example: `  iceflow config
+  iceflow config get lang
+  iceflow config set lang zh-CN`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			printTable(nil, [][]string{
 				{i18n.T("config"), config.ConfigPath()},

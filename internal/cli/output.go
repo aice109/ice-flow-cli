@@ -205,10 +205,24 @@ func fmtLocal(t time.Time, layout string) string {
 }
 
 // fmtDue renders an optional due time as "<date> (<relative>)", colored by
-// urgency: red when overdue, yellow when due within a day.
-func fmtDue(due *time.Time, now time.Time) string {
+// urgency: red when overdue, yellow when due within a day. All-day dates show
+// the date and a translated "all day" marker instead of a clock.
+func fmtDue(due *time.Time, allDay bool, now time.Time) string {
 	if due == nil {
 		return dim("-")
+	}
+	if allDay {
+		base := fmtLocal(*due, "2006-01-02") + " (" + i18n.T("all day") + ")"
+		dueDay := startOfLocalDay(*due)
+		nowDay := startOfLocalDay(now)
+		switch {
+		case dueDay.Before(nowDay):
+			return red(base)
+		case dueDay.Equal(nowDay):
+			return yellow(base)
+		default:
+			return base
+		}
 	}
 	base := fmtLocal(*due, "2006-01-02 15:04")
 	rel := relTime(*due, now)
@@ -219,4 +233,10 @@ func fmtDue(due *time.Time, now time.Time) string {
 		return yellow(base + " (" + rel + ")")
 	}
 	return base + " (" + rel + ")"
+}
+
+func startOfLocalDay(t time.Time) time.Time {
+	t = t.Local()
+	y, m, d := t.Date()
+	return time.Date(y, m, d, 0, 0, 0, 0, time.Local)
 }

@@ -50,7 +50,7 @@ func Execute() int {
 
 // resolveLocale picks the output language before the command tree is built, so
 // help text and flag descriptions are translated as well. Priority: the --lang
-// flag, IFLOW_LANG, the config file, then the POSIX locale environment.
+// flag, ICEFLOW_LANG, the config file, then the POSIX locale environment.
 func resolveLocale(args []string) (string, error) {
 	fallback := fallbackLocale()
 	flagLang := scanLangFlag(args)
@@ -69,7 +69,7 @@ func resolveLocale(args []string) (string, error) {
 
 // fallbackLocale resolves the locale from everything except the --lang flag.
 func fallbackLocale() string {
-	if c := i18n.Canonical(os.Getenv("IFLOW_LANG")); c != "" {
+	if c := i18n.Canonical(os.Getenv("ICEFLOW_LANG")); c != "" {
 		return c
 	}
 	if cfg, err := config.Load(); err == nil {
@@ -104,6 +104,7 @@ func isAuto(s string) bool {
 }
 
 func (a *App) rootCmd() *cobra.Command {
+	var days int
 	root := &cobra.Command{
 		Use:   buildinfo.AppName,
 		Short: i18n.T(buildinfo.Description),
@@ -122,7 +123,7 @@ func (a *App) rootCmd() *cobra.Command {
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return a.runToday(cmd)
+			return a.runOverview(cmd, days)
 		},
 		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
 			a.maybeAutoUpdateCheck(cmd)
@@ -130,6 +131,7 @@ func (a *App) rootCmd() *cobra.Command {
 		},
 	}
 	root.SetUsageTemplate(usageTemplate)
+	root.Flags().IntVarP(&days, "days", "n", 1, "how many days ahead to show (1 = today only)")
 
 	pf := root.PersistentFlags()
 	pf.StringVar(&a.flagDB, "db", "", "path to the SQLite database (default: XDG data dir)")
@@ -148,6 +150,8 @@ func (a *App) rootCmd() *cobra.Command {
 		a.updateCmd(),
 		a.serviceCmd(),
 		a.configCmd(),
+		a.backupCmd(),
+		a.restoreCmd(),
 	)
 	addGroups(root)
 	return root
@@ -157,16 +161,21 @@ func (a *App) setupColor() {
 	colorEnabled = !a.flagNoColor && os.Getenv("NO_COLOR") == "" && isTerminal(os.Stdout)
 }
 
+// databasePath resolves the SQLite path: --db when set, otherwise the XDG data
+// directory.
+func (a *App) databasePath() string {
+	if a.flagDB != "" {
+		return a.flagDB
+	}
+	return config.DBPath()
+}
+
 // openStore lazily opens the database.
 func (a *App) openStore() (*store.Store, error) {
 	if a.Store != nil {
 		return a.Store, nil
 	}
-	path := a.flagDB
-	if path == "" {
-		path = config.DBPath()
-	}
-	s, err := store.Open(path)
+	s, err := store.Open(a.databasePath())
 	if err != nil {
 		return nil, err
 	}

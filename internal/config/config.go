@@ -2,7 +2,7 @@
 //
 // Locations follow the XDG base directory spec on both macOS and Linux so the
 // tool behaves identically on either platform. Override everything with
-// IFLOW_HOME.
+// ICEFLOW_HOME.
 package config
 
 import (
@@ -49,9 +49,9 @@ func Default() Config {
 	}
 }
 
-// HomeDir returns the IFLOW_HOME override, or "" when unset.
+// HomeDir returns the ICEFLOW_HOME override, or "" when unset.
 func HomeDir() string {
-	return os.Getenv("IFLOW_HOME")
+	return os.Getenv("ICEFLOW_HOME")
 }
 
 // configDir returns the directory holding config.toml.
@@ -88,7 +88,7 @@ func DataDir() string { return dataDir() }
 func ConfigPath() string { return filepath.Join(configDir(), "config.toml") }
 
 // DBPath is the absolute path to the SQLite database.
-func DBPath() string { return filepath.Join(dataDir(), "iflow.db") }
+func DBPath() string { return filepath.Join(dataDir(), "iceflow.db") }
 
 // StatePath returns a path under the data dir for small state/cache files.
 func StatePath(name string) string { return filepath.Join(dataDir(), name) }

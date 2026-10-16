@@ -1,19 +1,19 @@
 # goreleaser configuration — https://goreleaser.com
 #
-# Produces iflow_<version>_<os>_<arch>.tar.gz for macOS and Linux (amd64/arm64)
+# Produces iceflow_<version>_<os>_<arch>.tar.gz for macOS and Linux (amd64/arm64)
 # plus checksums.txt. The self-updater consumes exactly these names.
 version: 2
 
-project_name: iflow
+project_name: iceflow
 
 before:
   hooks:
     - go mod tidy
 
 builds:
-  - id: iflow
-    main: ./cmd/iflow
-    binary: iflow
+  - id: iceflow
+    main: ./cmd/iceflow
+    binary: iceflow
     env:
       - CGO_ENABLED=0
     goos:
@@ -29,7 +29,7 @@ builds:
       - -X github.com/aice109/ice-flow-cli/internal/buildinfo.Date={{ .CommitDate }}
 
 archives:
-  - id: iflow
+  - id: iceflow
     formats: [tar.gz]
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     files:
@@ -55,6 +55,6 @@ release:
   draft: false
   prerelease: auto
   header: |
-    ## iflow {{ .Version }}
+    ## iceflow {{ .Version }}
   footer: |
     **Full changelog**: https://github.com/aice109/ice-flow-cli/compare/{{ .PreviousTag }}...{{ .Tag }}

@@ -20,10 +20,10 @@ func (a *App) updateCmd() *cobra.Command {
 	var repo string
 	cmd := &cobra.Command{
 		Use:   "update",
-		Short: "Update iflow to the latest release",
+		Short: "Update iceflow to the latest release",
 		Long:  i18n.T("Download and install the latest release from GitHub, verifying its checksum before replacing the running binary."),
-		Example: `  iflow update --check
-  iflow update`,
+		Example: `  iceflow update --check
+  iceflow update`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if repo == "" {
@@ -38,19 +38,19 @@ func (a *App) updateCmd() *cobra.Command {
 				return err
 			}
 			if !hasUpdate && !force {
-				fmt.Println(i18n.Tf("iflow is up to date (%s)", buildinfo.Version))
+				fmt.Println(i18n.Tf("iceflow is up to date (%s)", buildinfo.Version))
 				return nil
 			}
 			fmt.Println(i18n.Tf("current %s → latest %s", buildinfo.Version, latest))
 			if check {
-				fmt.Println(i18n.T("run `iflow update` to install"))
+				fmt.Println(i18n.T("run `iceflow update` to install"))
 				return nil
 			}
 			path, err := client.Apply(rel)
 			if err != nil {
 				if errors.Is(err, fs.ErrPermission) {
 					return fmt.Errorf("%w\n%s", err,
-						i18n.T("hint: the binary is not writable; reinstall via your package manager or move iflow to a user-writable directory"))
+						i18n.T("hint: the binary is not writable; reinstall via your package manager or move iceflow to a user-writable directory"))
 				}
 				return err
 			}
@@ -71,7 +71,7 @@ func (a *App) updateCmd() *cobra.Command {
 // maybeAutoUpdateCheck performs a throttled (once a day) background check and
 // prints a one-line notice when a newer release exists. Failures are silent.
 func (a *App) maybeAutoUpdateCheck(cmd *cobra.Command) {
-	if !a.Cfg.AutoUpdateCheck || os.Getenv("IFLOW_NO_UPDATE_CHECK") != "" {
+	if !a.Cfg.AutoUpdateCheck || os.Getenv("ICEFLOW_NO_UPDATE_CHECK") != "" {
 		return
 	}
 	if buildinfo.Version == "dev" {
@@ -98,6 +98,6 @@ func (a *App) maybeAutoUpdateCheck(cmd *cobra.Command) {
 	if err != nil || !hasUpdate {
 		return
 	}
-	fmt.Fprintf(os.Stderr, "\n%s\n", i18n.Tf("%s %s is available (you have %s). Run `iflow update`.",
+	fmt.Fprintf(os.Stderr, "\n%s\n", i18n.Tf("%s %s is available (you have %s). Run `iceflow update`.",
 		buildinfo.AppName, latest, buildinfo.Version))
 }

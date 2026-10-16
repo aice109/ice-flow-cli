@@ -1,29 +1,29 @@
 # Building your command dictionary
 
-The command dictionary is the part of `iflow` that remembers the commands you
+The command dictionary is the part of `iceflow` that remembers the commands you
 can never quite recall. You teach it a command once, with a short explanation,
 and afterwards a partial query brings it back.
 
 ## The core loop
 
 ```sh
-# Teach iflow a command once ...
-iflow cmd add "flutter doctor" \
+# Teach iceflow a command once ...
+iceflow cmd add "flutter doctor" \
   -d "Check whether the Flutter toolchain is configured correctly" \
   -t flutter,env \
   --example "flutter doctor -v"
 
 # ... and find it later with whatever you remember.
-iflow find doctor
-iflow find flutter
-iflow find flu
+iceflow find doctor
+iceflow find flutter
+iceflow find flu
 ```
 
 All three queries return `flutter doctor` together with the explanation, tags
 and example.
 
 ```console
-$ iflow find flu
+$ iceflow find flu
 #1  3×
     flutter doctor
     Check whether the Flutter toolchain is configured correctly
@@ -31,7 +31,7 @@ $ iflow find flu
     example: flutter doctor -v
 ```
 
-The `3×` is a usage counter: entries you look up (or `iflow run`) rise in the
+The `3×` is a usage counter: entries you look up (or `iceflow run`) rise in the
 rankings over time.
 
 ## How search ranks results
@@ -50,16 +50,16 @@ result matched.
 ## Running a saved command
 
 ```sh
-iflow run doctor
+iceflow run doctor
 ```
 
-`iflow run` resolves the query to the top match, asks for confirmation (skip
+`iceflow run` resolves the query to the top match, asks for confirmation (skip
 with `--yes`), executes it through `sh -c`, and bumps its usage count. Because
 it uses your shell, pipes and redirections work:
 
 ```sh
-iflow cmd add "git cleanup" -d "Prune merged branches" --example "git branch --merged | grep -v main | xargs git branch -d"
-iflow run git cleanup
+iceflow cmd add "git cleanup" -d "Prune merged branches" --example "git branch --merged | grep -v main | xargs git branch -d"
+iceflow run git cleanup
 ```
 
 ## Importing an existing library
@@ -84,7 +84,7 @@ iflow run git cleanup
 ```
 
 ```sh
-iflow cmd import commands.json
+iceflow cmd import commands.json
 ```
 
 ### Plain text
@@ -112,17 +112,17 @@ your dictionary in a note and import it:
 ## Exporting and sharing
 
 ```sh
-iflow cmd export --format md   > my-commands.md
-iflow cmd export --format json > my-commands.json
+iceflow cmd export --format md   > my-commands.md
+iceflow cmd export --format json > my-commands.json
 ```
 
-Both formats round-trip through `iflow cmd import`, so exporting is a simple way
+Both formats round-trip through `iceflow cmd import`, so exporting is a simple way
 to back up or share a library.
 
 ## Editing and removing
 
 ```sh
-iflow cmd list
-iflow cmd edit 1 --desc "Updated explanation" --tag flutter,env,setup
-iflow cmd rm 1
+iceflow cmd list
+iceflow cmd edit 1 --desc "Updated explanation" --tag flutter,env,setup
+iceflow cmd rm 1
 ```

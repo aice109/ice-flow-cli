@@ -1,9 +1,9 @@
-# iflow — Makefile
+# iceflow — Makefile
 #
 # Common developer tasks. Version metadata is derived from git so that
-# `iflow version` reports something meaningful for local builds.
+# `iceflow version` reports something meaningful for local builds.
 
-BINARY   := iflow
+BINARY   := iceflow
 PKG      := github.com/aice109/ice-flow-cli
 CMD      := ./cmd/$(BINARY)
 BINDIR   := bin
@@ -59,7 +59,7 @@ tidy:
 
 ## run: build and run against temporary state
 run: build
-	IFLOW_HOME="$$(mktemp -d)" ./$(BINDIR)/$(BINARY)
+	ICEFLOW_HOME="$$(mktemp -d)" ./$(BINDIR)/$(BINARY)
 
 ## snapshot: build release artifacts locally without publishing
 snapshot:

@@ -1,4 +1,4 @@
-# Contributing to iflow
+# Contributing to iceflow
 
 Thanks for taking the time to contribute! This document explains how to set up
 the project, the conventions we follow, and how releases are made.
@@ -14,7 +14,7 @@ Requirements:
 ```sh
 git clone https://github.com/aice109/ice-flow-cli
 cd ice-flow-cli
-make build        # -> ./bin/iflow
+make build        # -> ./bin/iceflow
 make test
 ```
 
@@ -22,13 +22,13 @@ Run the freshly built binary against throwaway state so you do not touch your
 real data:
 
 ```sh
-IFLOW_HOME=$(mktemp -d) ./bin/iflow --help
+ICEFLOW_HOME=$(mktemp -d) ./bin/iceflow --help
 ```
 
 ## Project layout
 
 ```
-cmd/iflow            entry point
+cmd/iceflow            entry point
 internal/cli         cobra commands
 internal/store       SQLite persistence + migrations
 internal/fuzzy       fuzzy ranking
@@ -105,9 +105,9 @@ Maintainers:
    ```
 
 4. The `release` GitHub Actions workflow runs goreleaser, which publishes the
-   archives and `checksums.txt`. Users pick them up with `iflow update`.
+   archives and `checksums.txt`. Users pick them up with `iceflow update`.
 
 ## Reporting bugs
 
-Please use the issue templates. Include your OS/arch, `iflow version` output,
+Please use the issue templates. Include your OS/arch, `iceflow version` output,
 and the exact commands and output that reproduce the problem.

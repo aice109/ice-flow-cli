@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	unitName   = "iflow"
+	unitName   = "iceflow"
 	cronMarker = "# ice-flow (" + buildinfo.BundleID + ")"
 )
 
@@ -24,30 +24,25 @@ func unitDir() string {
 }
 
 func servicePath() string { return filepath.Join(unitDir(), unitName+".service") }
-func timerPath() string   { return filepath.Join(unitDir(), unitName+".timer") }
+
+// timerPath is the legacy systemd timer installed by versions before the
+// resident scheduler. It is removed on install and uninstall so an upgraded
+// system does not run both a timer and the service.
+func timerPath() string { return filepath.Join(unitDir(), unitName+".timer") }
 
 func serviceBody(exe string) string {
 	return fmt.Sprintf(`[Unit]
-Description=ice-flow reminder tick (%s)
+Description=ice-flow reminder scheduler (%s)
 
 [Service]
-Type=oneshot
-ExecStart=%s remind daemon --tick
-`, Label(), exe)
-}
-
-func timerBody() string {
-	return `[Unit]
-Description=ice-flow reminder tick timer
-
-[Timer]
-OnBootSec=30s
-OnUnitActiveSec=60s
-Persistent=true
+Type=simple
+ExecStart=%s remind daemon
+Restart=always
+RestartSec=1
 
 [Install]
-WantedBy=timers.target
-`
+WantedBy=default.target
+`, Label(), exe)
 }
 
 func hasSystemd() bool {
@@ -64,14 +59,15 @@ func install(exe string) (string, error) {
 
 func uninstall() (string, error) {
 	if hasSystemd() {
+		_ = exec.Command("systemctl", "--user", "disable", "--now", unitName+".service").Run()
+		_ = os.Remove(servicePath())
 		_ = exec.Command("systemctl", "--user", "disable", "--now", unitName+".timer").Run()
 		_ = os.Remove(timerPath())
-		_ = os.Remove(servicePath())
 		_ = exec.Command("systemctl", "--user", "daemon-reload").Run()
 		if hasCronEntry() {
 			_ = removeCron()
 		}
-		return i18n.Tf("removed systemd user timer %s.timer", unitName), nil
+		return i18n.Tf("removed systemd user service %s.service", unitName), nil
 	}
 	if err := removeCron(); err != nil {
 		return "", err
@@ -81,39 +77,62 @@ func uninstall() (string, error) {
 
 func status() (string, error) {
 	if hasSystemd() {
-		out, err := exec.Command("systemctl", "--user", "is-active", unitName+".timer").Output()
+		out, err := exec.Command("systemctl", "--user", "is-active", unitName+".service").Output()
 		state := strings.TrimSpace(string(out))
 		if err != nil || state != "active" {
-			if _, statErr := os.Stat(timerPath()); statErr == nil {
-				return i18n.Tf("installed but not active\n  unit: %s", timerPath()), nil
+			if _, statErr := os.Stat(servicePath()); statErr == nil {
+				return i18n.Tf("installed but not active\n  unit: %s", servicePath()), nil
 			}
 			return i18n.T("not installed"), nil
 		}
-		return i18n.Tf("installed and active\n  unit: %s", timerPath()), nil
+		return i18n.Tf("installed and active\n  unit: %s", servicePath()), nil
 	}
 	if hasCronEntry() {
-		return i18n.T("installed via crontab"), nil
+		return i18n.T("installed via crontab (fires at minute granularity)"), nil
 	}
 	return i18n.T("not installed"), nil
+}
+
+func installed() bool {
+	if hasSystemd() {
+		if _, err := os.Stat(servicePath()); err == nil {
+			return true
+		}
+	}
+	return hasCronEntry()
+}
+
+func restart() (string, error) {
+	if hasSystemd() {
+		if _, err := os.Stat(servicePath()); err != nil {
+			return "", nil
+		}
+		if out, err := exec.Command("systemctl", "--user", "restart", unitName+".service").CombinedOutput(); err != nil {
+			return "", fmt.Errorf("systemctl restart: %v (%s)", err, out)
+		}
+		return i18n.Tf("restarted systemd user service %s.service", unitName), nil
+	}
+	// A crontab entry spawns a fresh process each minute; nothing to restart.
+	return "", nil
 }
 
 func installSystemd(exe string) (string, error) {
 	if err := os.MkdirAll(unitDir(), 0o755); err != nil {
 		return "", err
 	}
+	// Drop the legacy timer from older versions before enabling the service.
+	_ = exec.Command("systemctl", "--user", "disable", "--now", unitName+".timer").Run()
+	_ = os.Remove(timerPath())
 	if err := os.WriteFile(servicePath(), []byte(serviceBody(exe)), 0o644); err != nil {
-		return "", err
-	}
-	if err := os.WriteFile(timerPath(), []byte(timerBody()), 0o644); err != nil {
 		return "", err
 	}
 	if out, err := exec.Command("systemctl", "--user", "daemon-reload").CombinedOutput(); err != nil {
 		return "", fmt.Errorf("systemctl daemon-reload: %v (%s)", err, out)
 	}
-	if out, err := exec.Command("systemctl", "--user", "enable", "--now", unitName+".timer").CombinedOutput(); err != nil {
+	if out, err := exec.Command("systemctl", "--user", "enable", "--now", unitName+".service").CombinedOutput(); err != nil {
 		return "", fmt.Errorf("systemctl enable --now: %v (%s)", err, out)
 	}
-	return i18n.Tf("installed systemd user timer %s.timer\n  unit:   %s\n  action: %s remind daemon --tick (every 60s)", unitName, timerPath(), exe), nil
+	return i18n.Tf("installed systemd user service %s.service\n  unit:   %s\n  action: %s remind daemon (resident scheduler)", unitName, servicePath(), exe), nil
 }
 
 // --- cron fallback --------------------------------------------------------

@@ -91,3 +91,53 @@ func TestParseWhenClockRollsOver(t *testing.T) {
 		t.Errorf("got %v want %v", got, want)
 	}
 }
+
+func TestParseWhenBareDayDefaultsTime(t *testing.T) {
+	now := time.Date(2026, 10, 15, 21, 0, 0, 0, time.Local)
+	got, err := ParseWhen("tomorrow", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := time.Date(2026, 10, 16, 9, 0, 0, 0, time.Local); !got.Equal(want) {
+		t.Errorf("ParseWhen(tomorrow) = %v, want %v", got, want)
+	}
+	got, err = ParseWhen("today", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !got.Equal(now) {
+		t.Errorf("ParseWhen(today) = %v, want %v", got, now)
+	}
+}
+
+func TestParseWhenAllDay(t *testing.T) {
+	now := time.Date(2026, 10, 15, 21, 0, 0, 0, time.Local) // Thursday
+	cases := []struct {
+		expr   string
+		allDay bool
+		want   time.Time
+	}{
+		{"today", true, time.Date(2026, 10, 15, 0, 0, 0, 0, time.Local)},
+		{"tomorrow", true, time.Date(2026, 10, 16, 0, 0, 0, 0, time.Local)},
+		{"monday", true, time.Date(2026, 10, 19, 0, 0, 0, 0, time.Local)},
+		{"2026-10-20", true, time.Date(2026, 10, 20, 0, 0, 0, 0, time.Local)},
+		{"2026/10/20", true, time.Date(2026, 10, 20, 0, 0, 0, 0, time.Local)},
+		{"tomorrow 9am", false, time.Date(2026, 10, 16, 9, 0, 0, 0, time.Local)},
+		{"2026-10-20 15:00", false, time.Date(2026, 10, 20, 15, 0, 0, 0, time.Local)},
+		{"09:30", false, time.Date(2026, 10, 16, 9, 30, 0, 0, time.Local)},
+		{"in 2h", false, now.Add(2 * time.Hour)},
+	}
+	for _, c := range cases {
+		got, allDay, err := ParseWhenAllDay(c.expr, now)
+		if err != nil {
+			t.Errorf("ParseWhenAllDay(%q) error: %v", c.expr, err)
+			continue
+		}
+		if allDay != c.allDay {
+			t.Errorf("ParseWhenAllDay(%q) allDay = %v, want %v", c.expr, allDay, c.allDay)
+		}
+		if !got.Equal(c.want) {
+			t.Errorf("ParseWhenAllDay(%q) = %v, want %v", c.expr, got, c.want)
+		}
+	}
+}

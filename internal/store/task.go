@@ -26,9 +26,9 @@ func (s *Store) CreateTask(t *Task) (int64, error) {
 	}
 	now := nowStr()
 	res, err := s.db.Exec(`
-		INSERT INTO tasks (title, notes, status, priority, project, parent_id, due_at, tags, created_at, updated_at, completed_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		t.Title, t.Notes, t.Status, t.Priority, t.Project, nullInt(t.ParentID), fmtTime(t.DueAt), JoinTags(t.Tags), now, now, fmtTime(t.CompletedAt),
+		INSERT INTO tasks (title, notes, status, priority, project, parent_id, due_at, all_day, tags, created_at, updated_at, completed_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		t.Title, t.Notes, t.Status, t.Priority, t.Project, nullInt(t.ParentID), fmtTime(t.DueAt), boolInt(t.AllDay), JoinTags(t.Tags), now, now, fmtTime(t.CompletedAt),
 	)
 	if err != nil {
 		return 0, err
@@ -46,7 +46,7 @@ func (s *Store) GetTask(id int64) (*Task, error) {
 	return t, err
 }
 
-const taskColumns = `SELECT id, title, notes, status, priority, project, parent_id, due_at, tags, created_at, updated_at, completed_at FROM tasks`
+const taskColumns = `SELECT id, title, notes, status, priority, project, parent_id, due_at, all_day, tags, created_at, updated_at, completed_at FROM tasks`
 
 // ListTasks returns tasks matching f, ordered by status, priority then due.
 func (s *Store) ListTasks(f TaskFilter) ([]Task, error) {
@@ -105,9 +105,9 @@ func (s *Store) ListTasks(f TaskFilter) ([]Task, error) {
 // UpdateTask persists all mutable fields of t.
 func (s *Store) UpdateTask(t *Task) error {
 	res, err := s.db.Exec(`
-		UPDATE tasks SET title=?, notes=?, status=?, priority=?, project=?, parent_id=?, due_at=?, tags=?, updated_at=?, completed_at=?
+		UPDATE tasks SET title=?, notes=?, status=?, priority=?, project=?, parent_id=?, due_at=?, all_day=?, tags=?, updated_at=?, completed_at=?
 		WHERE id=?`,
-		t.Title, t.Notes, t.Status, t.Priority, t.Project, nullInt(t.ParentID), fmtTime(t.DueAt), JoinTags(t.Tags), nowStr(), fmtTime(t.CompletedAt), t.ID,
+		t.Title, t.Notes, t.Status, t.Priority, t.Project, nullInt(t.ParentID), fmtTime(t.DueAt), boolInt(t.AllDay), JoinTags(t.Tags), nowStr(), fmtTime(t.CompletedAt), t.ID,
 	)
 	if err != nil {
 		return err
@@ -166,19 +166,21 @@ func scanTask(sc scanner) (*Task, error) {
 		t           Task
 		parentID    sql.NullInt64
 		dueAt       sql.NullString
+		allDay      int
 		completedAt sql.NullString
 		tags        string
 		createdAt   string
 		updatedAt   string
 	)
 	if err := sc.Scan(&t.ID, &t.Title, &t.Notes, &t.Status, &t.Priority, &t.Project, &parentID,
-		&dueAt, &tags, &createdAt, &updatedAt, &completedAt); err != nil {
+		&dueAt, &allDay, &tags, &createdAt, &updatedAt, &completedAt); err != nil {
 		return nil, err
 	}
 	if parentID.Valid {
 		t.ParentID = &parentID.Int64
 	}
 	t.DueAt = parseTime(dueAt)
+	t.AllDay = allDay == 1
 	t.CompletedAt = parseTime(completedAt)
 	t.Tags = SplitTags(tags)
 	t.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)

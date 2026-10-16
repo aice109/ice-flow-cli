@@ -46,8 +46,8 @@ func (a *App) taskAddCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "add <title>",
 		Short: "Add a task",
-		Example: `  iflow task add "Write weekly report" --due 2026-10-20 --prio high --tag work
-  iflow task add "Design API" --project platform --parent 12`,
+		Example: `  iceflow task add "Write weekly report" --due 2026-10-20 --prio high --tag work
+  iceflow task add "Design API" --project platform --parent 12`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			st, err := a.openStore()
@@ -69,11 +69,12 @@ func (a *App) taskAddCmd() *cobra.Command {
 				Tags:     tags,
 			}
 			if due != "" {
-				d, err := parseDue(due)
+				d, allDay, err := parseDue(due)
 				if err != nil {
 					return err
 				}
 				t.DueAt = &d
+				t.AllDay = allDay
 			}
 			if parent != 0 {
 				if _, err := st.GetTask(parent); err != nil {
@@ -109,9 +110,9 @@ func (a *App) taskListCmd() *cobra.Command {
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Short:   "List tasks (open by default; --all includes done)",
-		Example: `  iflow task list
-  iflow task list --all
-  iflow task list --project platform --status doing`,
+		Example: `  iceflow task list
+  iceflow task list --all
+  iceflow task list --project platform --status doing`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			st, err := a.openStore()
@@ -139,8 +140,8 @@ func (a *App) taskTodayCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "today",
 		Short: "Show overdue, due-today and in-progress tasks",
-		Example: `  iflow task today
-  iflow            # same as "task today"`,
+		Example: `  iceflow task today
+  iceflow            # same as "task today"`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return a.runToday(cmd)
@@ -152,8 +153,8 @@ func (a *App) taskTreeCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "tree",
 		Short: "Show tasks as a hierarchy",
-		Example: `  iflow task tree
-  iflow task tree --json`,
+		Example: `  iceflow task tree
+  iceflow task tree --json`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			st, err := a.openStore()
@@ -177,7 +178,7 @@ func (a *App) taskStatusCmd(name, short, status string) *cobra.Command {
 	return &cobra.Command{
 		Use:     name + " <id>",
 		Short:   short,
-		Example: "  iflow task " + name + " 12",
+		Example: "  iceflow task " + name + " 12",
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			id, err := strconv.ParseInt(args[0], 10, 64)
@@ -213,9 +214,9 @@ func (a *App) taskEditCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "edit <id>",
 		Short: "Edit a task's fields",
-		Example: `  iflow task edit 12 --due tomorrow --prio high
-  iflow task edit 12 --add-tag urgent --rm-tag later
-  iflow task edit 12 --clear-due`,
+		Example: `  iceflow task edit 12 --due tomorrow --prio high
+  iceflow task edit 12 --add-tag urgent --rm-tag later
+  iceflow task edit 12 --clear-due`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			id, err := strconv.ParseInt(args[0], 10, 64)
@@ -252,14 +253,16 @@ func (a *App) taskEditCmd() *cobra.Command {
 				t.Project = project
 			}
 			if due != "" {
-				d, err := parseDue(due)
+				d, allDay, err := parseDue(due)
 				if err != nil {
 					return err
 				}
 				t.DueAt = &d
+				t.AllDay = allDay
 			}
 			if clearD {
 				t.DueAt = nil
+				t.AllDay = false
 			}
 			if len(tags) > 0 {
 				t.Tags = tags
@@ -292,8 +295,8 @@ func (a *App) taskRmCmd() *cobra.Command {
 		Use:     "rm <id>",
 		Aliases: []string{"delete", "remove"},
 		Short:   "Delete a task (and its subtasks)",
-		Example: `  iflow task rm 12
-  iflow task rm 12 --yes`,
+		Example: `  iceflow task rm 12
+  iceflow task rm 12 --yes`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			id, err := strconv.ParseInt(args[0], 10, 64)
@@ -331,6 +334,7 @@ func (a *App) runToday(cmd *cobra.Command) error {
 		return err
 	}
 	endOfDay := time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 0, now.Location())
+	startOfToday := startOfLocalDay(now)
 	var overdue, today, doing []store.Task
 	for _, t := range tasks {
 		if t.Status == store.StatusDone {
@@ -341,9 +345,22 @@ func (a *App) runToday(cmd *cobra.Command) error {
 			doing = append(doing, t)
 		}
 		if t.DueAt != nil {
-			if t.DueAt.Before(now) {
+			due := *t.DueAt
+			if t.AllDay {
+				// An all-day task is overdue only once its date has passed,
+				// and due today while the date is still today.
+				dueDay := startOfLocalDay(due)
+				switch {
+				case dueDay.Before(startOfToday):
+					overdue = append(overdue, t)
+				case !dueDay.After(startOfToday):
+					today = append(today, t)
+				}
+				continue
+			}
+			if due.Before(now) {
 				overdue = append(overdue, t)
-			} else if !t.DueAt.After(endOfDay) {
+			} else if !due.After(endOfDay) {
 				today = append(today, t)
 			}
 		}
@@ -397,7 +414,7 @@ func taskRows(tasks []store.Task, now time.Time) [][]string {
 			strconv.FormatInt(t.ID, 10),
 			statusGlyph(t.Status),
 			store.PriorityLabel(t.Priority),
-			fmtDue(t.DueAt, now),
+			fmtDue(t.DueAt, t.AllDay, now),
 			projectLabel(t.Project),
 			title,
 			tagsLabel(t.Tags),
@@ -428,7 +445,7 @@ func renderTree(tasks []store.Task) {
 		indent := strings.Repeat("  ", depth)
 		line := fmt.Sprintf("%s%s %s #%s %s", indent, statusGlyph(t.Status), store.PriorityLabel(t.Priority), strconv.FormatInt(t.ID, 10), t.Title)
 		if t.DueAt != nil {
-			line += " " + dim("("+fmtDue(t.DueAt, now)+")")
+			line += " " + dim("("+fmtDue(t.DueAt, t.AllDay, now)+")")
 		}
 		fmt.Println(line)
 		for _, c := range children[t.ID] {
@@ -471,8 +488,8 @@ func parsePriority(s string) (int, error) {
 	return 0, errors.New(i18n.Tf("invalid priority %q (use p0..p3 or high/med/low)", s))
 }
 
-func parseDue(s string) (time.Time, error) {
-	return timeparse.ParseWhen(s, time.Now())
+func parseDue(s string) (time.Time, bool, error) {
+	return timeparse.ParseWhenAllDay(s, time.Now())
 }
 
 func projectLabel(p string) string {

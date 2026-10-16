@@ -1,4 +1,4 @@
-// Command iflow is a local-first personal productivity CLI for tasks,
+// Command iceflow is a local-first personal productivity CLI for tasks,
 // reminders and a self-built command dictionary.
 package main
 

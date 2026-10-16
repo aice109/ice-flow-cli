@@ -14,14 +14,14 @@ func (a *App) serviceCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "service",
 		Short: "Manage the background reminder job",
-		Long: i18n.T("Install a background job that runs `iflow remind daemon --tick` every minute so reminders fire even when the CLI is closed.") + "\n\n" +
-			i18n.T("macOS: launchd agent. Linux: systemd --user timer (crontab fallback)."),
+		Long: i18n.T("Install a resident background scheduler that fires reminders even when the CLI is closed.") + "\n\n" +
+			i18n.T("macOS: launchd agent. Linux: systemd --user service (crontab fallback)."),
 	}
 	var install bool
 	installCmd := &cobra.Command{
 		Use:     "install",
 		Short:   "Install the background reminder job",
-		Example: "  iflow service install",
+		Example: "  iceflow service install",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			exe, err := os.Executable()
@@ -55,7 +55,7 @@ func (a *App) serviceCmd() *cobra.Command {
 	statusCmd := &cobra.Command{
 		Use:     "status",
 		Short:   "Show the background job status",
-		Example: "  iflow service status",
+		Example: "  iceflow service status",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			desc, err := service.Status()
